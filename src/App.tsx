@@ -58,6 +58,7 @@ import {
 
 import { SupplierRemindersPanel } from "./components/SupplierRemindersPanel";
 import { ButcherShopsSection } from "./components/ButcherShopsSection";
+import { BrandLogo } from "./components/BrandLogo";
 
 // Indian Market Breed lists for different livestock classes
 export const COW_BREEDS = [
@@ -182,7 +183,7 @@ export const getBreedsForType = (type: string): string[] => {
 };
 
 // Types
-type UserRole = "Administrator" | "Livestock Manager" | "Retail Cashier" | "Investor";
+type UserRole = "Administrator" | "Livestock Management" | "Butcher Shop" | "Collections" | "Feed Shop" | "Livestock Manager" | "Retail Cashier" | "Investor";
 
 interface UserSession {
   uid: string;
@@ -254,6 +255,9 @@ interface Animal {
   leftSideImage?: string;
   rightSideImage?: string;
   backsideImage?: string;
+  teethImage?: string;
+  color?: string;
+  appearance?: string;
   isFromBazar?: boolean;
   bazarReceiptImage?: string;
   bazarName?: string;
@@ -319,26 +323,35 @@ const DEMO_PROFILES: UserSession[] = [
     name: "Salim Mia",
     email: "salim.manager@meatflow.com",
     phone: "+880 1815-555121",
-    role: "Livestock Manager",
+    role: "Livestock Management",
     avatarUrl: "https://api.dicebear.com/7.x/pixel-art/svg?seed=salim",
     authMethod: "Demo"
   },
   {
     uid: "usr-003",
-    name: "Shaie Rahman",
-    email: "shaie.cashier@meatflow.com",
+    name: "Tariqul Islam",
+    email: "tariqul.butcher@meatflow.com",
     phone: "+880 1511-999888",
-    role: "Retail Cashier",
-    avatarUrl: "https://api.dicebear.com/7.x/pixel-art/svg?seed=shaie",
+    role: "Butcher Shop",
+    avatarUrl: "https://api.dicebear.com/7.x/pixel-art/svg?seed=tariqul",
     authMethod: "Demo"
   },
   {
     uid: "usr-004",
-    name: "Imran Khan",
-    email: "imran.investor@meatflow.com",
+    name: "Shaie Rahman",
+    email: "shaie.collections@meatflow.com",
     phone: "+880 1912-777666",
-    role: "Investor",
-    avatarUrl: "https://api.dicebear.com/7.x/pixel-art/svg?seed=imran",
+    role: "Collections",
+    avatarUrl: "https://api.dicebear.com/7.x/pixel-art/svg?seed=shaie",
+    authMethod: "Demo"
+  },
+  {
+    uid: "usr-005",
+    name: "Hasan Ali",
+    email: "hasan.feed@meatflow.com",
+    phone: "+880 1612-888999",
+    role: "Feed Shop",
+    avatarUrl: "https://api.dicebear.com/7.x/pixel-art/svg?seed=hasan",
     authMethod: "Demo"
   }
 ];
@@ -346,6 +359,22 @@ const DEMO_PROFILES: UserSession[] = [
 function isTabAllowed(tabId: string, role?: UserRole): boolean {
   if (!role) return false;
   if (role === "Administrator") return true;
+
+  // Department-specific authorizations
+  if (role === "Livestock Management") {
+    return tabId === "dashboard" || tabId === "livestock";
+  }
+  if (role === "Butcher Shop") {
+    return tabId === "dashboard" || tabId === "butchers";
+  }
+  if (role === "Collections") {
+    return tabId === "dashboard" || tabId === "retail";
+  }
+  if (role === "Feed Shop") {
+    return tabId === "dashboard" || tabId === "cattle-feed";
+  }
+
+  // Legacy preset compatibility
   if (role === "Livestock Manager") {
     return tabId === "dashboard" || tabId === "livestock" || tabId === "cattle-feed" || tabId === "butchers";
   }
@@ -1372,6 +1401,7 @@ export default function ShaieAlamDashboard() {
   const renderLoginScreen = () => {
     const handlePresetLogin = (profile: UserSession) => {
       setCurrentUser(profile);
+      setActiveTab("dashboard");
     };
 
     const handleSmsSend = (e: React.FormEvent) => {
@@ -1402,6 +1432,7 @@ export default function ShaieAlamDashboard() {
         setAuthSmsSent(false);
         setIncomingSmsBannerCode(null);
         setEnteredOtpCode("");
+        setActiveTab("dashboard");
       } else {
         alert("Verification code is incorrect. Please check the simulated SMS alert!");
       }
@@ -1429,6 +1460,7 @@ export default function ShaieAlamDashboard() {
         authMethod: "Email"
       });
       setAuthEmailSent(false);
+      setActiveTab("dashboard");
     };
 
     const handleSocialSelectAndLogin = (provider: string) => {
@@ -1446,6 +1478,7 @@ export default function ShaieAlamDashboard() {
         authMethod: "Social",
         provider
       });
+      setActiveTab("dashboard");
     };
 
     return (
@@ -1487,15 +1520,7 @@ export default function ShaieAlamDashboard() {
           <div className="lg:col-span-5 flex flex-col justify-between p-6 lg:p-8 shrink-0">
             <div className="space-y-6">
               <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-2xl bg-teal-500 flex items-center justify-center shadow-lg shadow-teal-500/20 text-slate-950">
-                  <ChefHat className="h-6 w-6" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                    ShaieAlam <span className="text-[10px] bg-teal-500/20 text-teal-400 px-1.5 py-0.5 rounded uppercase font-bold">ERP</span>
-                  </h1>
-                  <span className="text-[10px] text-slate-500 font-mono">v1.1 Security Clearance Core</span>
-                </div>
+                <BrandLogo size={48} variant="full" />
               </div>
 
               <div className="space-y-4 pt-4 border-t border-slate-800">
@@ -1598,10 +1623,11 @@ export default function ShaieAlamDashboard() {
                         onChange={(e) => setSelectedRoleForCustomAuth(e.target.value as UserRole)}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500 cursor-pointer"
                       >
-                        <option value="Administrator">Administrator (Station Head)</option>
-                        <option value="Livestock Manager">Livestock Manager (Pen & Yield Ops)</option>
-                        <option value="Retail Cashier">Retail Cashier (Point of Sales)</option>
-                        <option value="Investor">Investor (Shareholder Stake)</option>
+                        <option value="Administrator">1. Administrator (All Access)</option>
+                        <option value="Livestock Management">2. Livestock Management</option>
+                        <option value="Butcher Shop">3. Butcher Shop</option>
+                        <option value="Collections">4. Collections (POS & Ledger)</option>
+                        <option value="Feed Shop">5. Feed Shop (Welfare & Store)</option>
                       </select>
                     </div>
                   </div>
@@ -1615,13 +1641,13 @@ export default function ShaieAlamDashboard() {
                     Assigned Role for Social handshake:
                   </p>
                   <div className="flex gap-3 justify-start mb-4 overflow-x-auto pb-1">
-                    {["Administrator", "Livestock Manager", "Retail Cashier", "Investor"].map((role) => (
+                    {["Administrator", "Livestock Management", "Butcher Shop", "Collections", "Feed Shop"].map((role) => (
                       <button
                         key={role}
                         onClick={() => setSelectedRoleForCustomAuth(role as any)}
                         className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold transition select-none cursor-pointer shrink-0 ${
                           selectedRoleForCustomAuth === role
-                            ? "bg-teal-500/10 text-teal-400 border-teal-500/30"
+                            ? "bg-teal-500/10 text-teal-400 border-teal-500/30 font-black"
                             : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
                         }`}
                       >
@@ -1775,9 +1801,10 @@ export default function ShaieAlamDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {DEMO_PROFILES.map(profile => {
                   let badgeColor = "bg-rose-500/15 text-rose-400 border border-rose-500/25";
-                  if (profile.role === "Livestock Manager") badgeColor = "bg-teal-500/15 text-teal-450 text-teal-400 border border-teal-500/25";
-                  if (profile.role === "Retail Cashier") badgeColor = "bg-blue-500/15 text-blue-400 border border-blue-500/25";
-                  if (profile.role === "Investor") badgeColor = "bg-purple-500/15 text-purple-450 text-purple-400 border border-purple-500/25";
+                  if (profile.role === "Livestock Management") badgeColor = "bg-teal-500/15 text-teal-400 border border-teal-500/25";
+                  if (profile.role === "Butcher Shop") badgeColor = "bg-orange-500/15 text-orange-400 border border-orange-500/25";
+                  if (profile.role === "Collections") badgeColor = "bg-blue-500/15 text-blue-400 border border-blue-500/25";
+                  if (profile.role === "Feed Shop") badgeColor = "bg-amber-500/15 text-amber-500 border border-amber-500/25";
 
                   return (
                     <button
@@ -1795,9 +1822,11 @@ export default function ShaieAlamDashboard() {
                         </div>
                         <p className="text-[10px] text-slate-400 leading-normal line-clamp-2">
                           {profile.role === "Administrator" ? activeTrans.adminDesc :
-                           profile.role === "Livestock Manager" ? activeTrans.livestockDesc :
-                           profile.role === "Retail Cashier" ? activeTrans.cashierDesc :
-                           activeTrans.investorDesc}
+                           profile.role === "Livestock Management" ? "Livestock department operations only." :
+                           profile.role === "Butcher Shop" ? "Butcher outlet tracking and actual carcass portion credits." :
+                           profile.role === "Collections" ? "Retail sales checkout counter and money collections ledger." :
+                           profile.role === "Feed Shop" ? "Nutritional bags allocation, medicines & store-front terminal." :
+                           "Department clearance access level."}
                         </p>
                       </div>
                     </button>
@@ -1836,8 +1865,6 @@ export default function ShaieAlamDashboard() {
         setSyncStatus("Online");
       }, 2500);
       
-      // Also fetch smart alerts upon sync completion to represent cloud integration
-      fetchSmartAlertsFromServer();
     }, 2000);
   };
 
@@ -1915,6 +1942,8 @@ export default function ShaieAlamDashboard() {
     healthCondition: "8/10 (Good)",
     birthDate: "2024-05-20",
     ageMonths: 24,
+    color: "",
+    appearance: "",
     notes: "",
     dueDate: "2026-05-27",
     dateAdded: new Date().toISOString().split("T")[0],
@@ -1925,6 +1954,9 @@ export default function ShaieAlamDashboard() {
   const [leftSideImage, setLeftSideImage] = useState<string>("");
   const [rightSideImage, setRightSideImage] = useState<string>("");
   const [backsideImage, setBacksideImage] = useState<string>("");
+  const [teethImage, setTeethImage] = useState<string>("");
+  const [isAnalyzingCattle, setIsAnalyzingCattle] = useState<boolean>(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<string>("");
   const [isFromBazar, setIsFromBazar] = useState<boolean>(false);
   const [bazarName, setBazarName] = useState<string>("");
   const [bazarReceiptImage, setBazarReceiptImage] = useState<string>("");
@@ -2142,20 +2174,6 @@ export default function ShaieAlamDashboard() {
   const [forecastLoading, setForecastLoading] = useState(false);
   const [forecastResult, setForecastResult] = useState<any>(null);
 
-  const [aiChatQuery, setAiChatQuery] = useState("");
-  const [aiChatHistory, setAiChatHistory] = useState<Array<{role: string, text: string}>>([
-    { role: "assistant", text: "Welcome to ShaieAlam LiveStock AI! I can calculate standard carcass dressing yields for cows, sheep, or buffaloes, draft sales agreements, or answer livestock rearing questions. Ask me anything!" }
-  ]);
-  const [answering, setAnswering] = useState(false);
-
-  // Smart Alerts powered by server-side Gemini
-  const [smartAlerts, setSmartAlerts] = useState<any[]>([
-    { id: "sa-1", type: "warning", messageEn: "Murrah Buffalo payment of ₹20,000 for Rafiq is due.", messageBn: "রফিক-এর জন্য মহিষের বকেয়া ২০,০০০ টাকা পরিশোধের সময় অতিক্রান্ত হয়েছে।" },
-    { id: "sa-2", type: "danger", messageEn: "Mutton stock below 5kg. Consider sourcing premium Black Bengal Goat.", messageBn: "খাসির মাংসের পরিমান ৫ কেজির নিচে। নতুন ছাগল ক্রয়ের পরিকল্পনা করুন।" },
-    { id: "sa-3", type: "info", messageEn: "Expected carcass yield of Jersey cow is higher than local breed.", messageBn: "দেশী জাতের চেয়ে জার্সি দুগ্ধবতী গরুর ড্রেসিং ওজন বেশি পাওয়া যায়।" }
-  ]);
-  const [generatingAlerts, setGeneratingAlerts] = useState(false);
-
   const [docLoading, setDocLoading] = useState(false);
   const [serverDoc, setServerDoc] = useState<any>(null);
 
@@ -2164,36 +2182,6 @@ export default function ShaieAlamDashboard() {
   const totalPendingDues = animals.reduce((acc, curr) => curr.status !== "Processed" && curr.status !== "Paid" ? acc + curr.due : acc, 0);
   const activeAnimalsCount = animals.filter(a => a.status === "Pending" || a.status === "Paid" || a.status === "Overdue").length;
   const lowStockCount = Object.keys(meatStock).filter(key => (meatStock[key] as number) < 10).length;
-
-  // Sync smart alerts from server based on actual numbers
-  const fetchSmartAlertsFromServer = async () => {
-    setGeneratingAlerts(true);
-    try {
-      const response = await fetch("/api/smart-alerts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          animals,
-          meatStock,
-          cashBalance,
-          totalUnpaidDues: totalPendingDues
-        })
-      });
-      const data = await response.json();
-      if (data && data.alerts) {
-        setSmartAlerts(data.alerts);
-      }
-    } catch (e) {
-      console.warn("Server is unavailable or API key missing, using robust offline fallback model.", e);
-    } finally {
-      setGeneratingAlerts(false);
-    }
-  };
-
-  useEffect(() => {
-    // Generate fresh alerts on startup
-    fetchSmartAlertsFromServer();
-  }, [animals.length, sales.length]);
 
   const handleUpdateAnimalStatusFromButcher = (animalId: string, status: "Processed") => {
     setAnimals(prev => prev.map(ani => {
@@ -2241,6 +2229,9 @@ export default function ShaieAlamDashboard() {
         leftSideImage: leftSideImage || undefined,
         rightSideImage: rightSideImage || undefined,
         backsideImage: backsideImage || undefined,
+        teethImage: teethImage || undefined,
+        color: newAnimal.color || undefined,
+        appearance: newAnimal.appearance || undefined,
         isFromBazar: isFromBazar,
         bazarName: isFromBazar ? (bazarName || "Local Bazar") : undefined,
         bazarReceiptImage: isFromBazar ? (bazarReceiptImage || undefined) : undefined
@@ -2257,6 +2248,8 @@ export default function ShaieAlamDashboard() {
       setLeftSideImage("");
       setRightSideImage("");
       setBacksideImage("");
+      setTeethImage("");
+      setAiAnalysisResult("");
       setIsFromBazar(false);
       setBazarName("");
       setBazarReceiptImage("");
@@ -2274,6 +2267,8 @@ export default function ShaieAlamDashboard() {
         healthCondition: "8/10 (Good)",
         birthDate: "2024-05-20",
         ageMonths: 24,
+        color: "",
+        appearance: "",
         notes: "",
         dueDate: "",
         dateAdded: new Date().toISOString().split("T")[0],
@@ -3735,31 +3730,38 @@ _Empowered by ShaieAlam ERP Systems_`;
     }
   };
 
-  // Perform custom profitability prediction and premium strategy via Server-Side Gemini API
+  // Perform custom profitability prediction and premium strategy locally
   const runAiPreEstimate = async () => {
     setPredicting(true);
     setAiPrediction(null);
-    try {
-      const response = await fetch("/api/predict-profit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: predictInputs.type,
-          breed: predictInputs.breed,
-          weightKg: predictInputs.weightKg,
-          purchasePrice: predictInputs.purchasePrice,
-          feedType: predictInputs.feedType,
-          healthCondition: predictInputs.healthCondition,
-          ageMonths: predictInputs.ageMonths
-        })
+    
+    // Simulate brief processing delay
+    setTimeout(() => {
+      const weight = parseFloat(predictInputs.weightKg) || 0;
+      const price = parseFloat(predictInputs.purchasePrice) || 0;
+      const type = predictInputs.type;
+      
+      const standardRatio = type.toLowerCase().includes("goat") || type.toLowerCase().includes("sheep") ? 0.46 : 0.52;
+      const expectedYieldKg = Math.round(weight * standardRatio * 10) / 10;
+      const pricePerKg = type.toLowerCase().includes("goat") || type.toLowerCase().includes("sheep") ? 850 : 450;
+      const expectedRevenue = Math.round(expectedYieldKg * pricePerKg);
+      const predictedProfit = expectedRevenue - price;
+      
+      setAiPrediction({
+        expectedYieldKg,
+        yieldRatio: standardRatio,
+        expectedRevenue,
+        predictedProfit,
+        yieldBreakdown: [
+          { item: "Premium Choice Cuts / Solid Steak Meat", quantityKg: Math.round(expectedYieldKg * 0.7 * 10) / 10, estimatedPricePerKg: pricePerKg, subtotal: Math.round(expectedYieldKg * 0.7 * pricePerKg) },
+          { item: "Soup Bones & High Gelatin Trimming", quantityKg: Math.round(expectedYieldKg * 0.2 * 10) / 10, estimatedPricePerKg: 180, subtotal: Math.round(expectedYieldKg * 0.2 * 180) },
+          { item: "Organs / Halal Offal & Tripe", quantityKg: Math.round(expectedYieldKg * 0.1 * 10) / 10, estimatedPricePerKg: 320, subtotal: Math.round(expectedYieldKg * 0.1 * 320) }
+        ],
+        aiAnalysis: `Dressing yield is standard ${Math.round(standardRatio * 100)}% based on scientific class specifications for ${type} (${predictInputs.breed}). Feed intake: ${predictInputs.feedType}.`,
+        bengaliAnalysis: `পশুর জাত ও ওজনের ভিত্তিতে স্ট্যান্ডার্ড ড্রেসিং হার ${Math.round(standardRatio * 100)}% নির্ধারণ করা হয়েছে। খাদ্য: ${predictInputs.feedType}।`
       });
-      const data = await response.json();
-      setAiPrediction(data);
-    } catch (err) {
-      console.error("Failed to run predictive model", err);
-    } finally {
       setPredicting(false);
-    }
+    }, 500);
   };
 
   // Perform smart investment profit forecasting for individual directory animals on-the-fly via Gemini
@@ -3787,40 +3789,6 @@ _Empowered by ShaieAlam ERP Systems_`;
       console.error("Failed to execute smart forecast for animal", err);
     } finally {
       setForecastLoading(false);
-    }
-  };
-
-  // Main UI Chat helper
-  const sendChatMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!aiChatQuery.trim()) return;
-
-    const userMessage = { role: "user", text: aiChatQuery };
-    setAiChatHistory(prev => [...prev, userMessage]);
-    setAiChatQuery("");
-    setAnswering(true);
-
-    try {
-      // Connect to Gemini models server side via custom prompt routing Or direct chat endpoints
-      const response = await fetch("/api/predict-profit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "Cow",
-          breed: "General",
-          weightKg: "250",
-          purchasePrice: "50000",
-          feedType: aiChatQuery, // Pass query as feed
-          notes: "Chat prompt query"
-        })
-      });
-      const data = await response.json();
-      const aiResponseText = `AI Response regarding: "${userMessage.text}"\n\n${data.aiAnalysis}\n\n**বাংলা অনুবাদ (Bengali Expert Help):**\n${data.bengaliAnalysis}`;
-      setAiChatHistory(prev => [...prev, { role: "assistant", text: aiResponseText }]);
-    } catch (err) {
-      setAiChatHistory(prev => [...prev, { role: "assistant", text: "I experienced connectivity issues reaching the full-stack server. However, consult your local veterinarian or livestock trade specialist. Maintain proper sanitization and Halal/Hygienic processing methods." }]);
-    } finally {
-      setAnswering(false);
     }
   };
 
@@ -3944,24 +3912,22 @@ _Empowered by ShaieAlam ERP Systems_`;
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans selection:bg-teal-500 selection:text-slate-900 antialiased">
+    <div className="min-h-screen bg-[#070d1e] text-slate-100 flex flex-col selection:bg-teal-500 selection:text-slate-900 antialiased font-sans">
       
       {/* Upper Navigation Bar */}
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 px-6 py-4">
+      <header className="border-b border-slate-800/60 bg-slate-950/65 backdrop-blur-md sticky top-0 z-40 px-6 py-3.5 shadow-lg shadow-black/20">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-teal-500 flex items-center justify-center shadow-lg shadow-teal-500/20 text-slate-950">
-              <ChefHat id="logo-icon" className="h-6 w-6" />
-            </div>
+            <BrandLogo size={42} variant="logo-only" />
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+              <h1 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2">
                 {activeTrans.appTitle}
-                <span className="text-xs bg-teal-500/20 text-teal-400 font-normal px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Offline ERP v1.1
+                <span className="text-[10px] bg-teal-400/10 text-teal-400 border border-teal-500/20 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  ERP v1.1
                 </span>
               </h1>
-              <p className="text-xs text-slate-400 mt-0.5 font-mono">
+              <p className="text-[10px] text-slate-400 font-mono tracking-wide uppercase">
                 {activeTrans.tagline}
               </p>
             </div>
@@ -3970,11 +3936,11 @@ _Empowered by ShaieAlam ERP Systems_`;
           <div className="flex items-center gap-3 md:gap-4 flex-wrap">
             
             {/* Quick Balance Account Display */}
-            <div className="bg-slate-900 rounded-2xl px-4 py-2 border border-slate-800 flex items-center gap-2.5">
-              <span className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
+            <div className="bg-slate-900/80 rounded-xl px-4 py-2 border border-slate-800/80 flex items-center gap-2.5 shadow-inner">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
               <div className="font-mono text-xs">
-                <span className="text-slate-500 uppercase">Cash:</span>{" "}
-                <span className="text-teal-400 font-bold font-mono">₹{cashBalance.toLocaleString()}</span>
+                <span className="text-slate-500 uppercase text-[9px] tracking-wider">Cash Reserves:</span>{" "}
+                <span className="text-emerald-400 font-extrabold font-mono text-sm ml-1">₹{cashBalance.toLocaleString()}</span>
               </div>
             </div>
 
@@ -4173,14 +4139,16 @@ _Empowered by ShaieAlam ERP Systems_`;
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-6 py-4 md:py-6 flex flex-col gap-4 md:gap-6">
         
         {/* Navigation Tabs Bar */}
-        <div className="border border-slate-800 bg-slate-950/40 p-1 rounded-xl flex overflow-x-auto whitespace-nowrap scrollbar-none gap-1">
+        <div className="border border-slate-800 bg-slate-950/65 backdrop-blur-md p-1 rounded-xl flex overflow-x-auto whitespace-nowrap scrollbar-none gap-1 shadow-lg shadow-black/30">
           {[
             { id: "dashboard", label: activeTrans.dashboard, icon: Activity },
             { id: "livestock", label: activeTrans.livestock, icon: Layers },
             { id: "cattle-feed", label: activeTrans.cattleFeed, icon: Wheat },
             { id: "retail", label: activeTrans.retail, icon: ShoppingCart },
-            { id: "butchers", label: activeTrans.butchers, icon: ChefHat }
-          ].map(tab => {
+            { id: "butchers", label: activeTrans.butchers, icon: ChefHat },
+            { id: "investors", label: activeTrans.investments || "Shares & Investors", icon: Users },
+            { id: "ai-assistant", label: activeTrans.aiAssistant || "Smart AI Assistant", icon: Sparkles }
+          ].filter(tab => isTabAllowed(tab.id, currentUser?.role)).map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
@@ -4189,17 +4157,14 @@ _Empowered by ShaieAlam ERP Systems_`;
                 id={`tab-btn-${tab.id}`}
                 onClick={() => {
                   setActiveTab(tab.id as any);
-                  if (tab.id === 'dashboard') {
-                    fetchSmartAlertsFromServer();
-                  }
                 }}
-                className={`flex items-center gap-1.5 md:gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg md:rounded-xl text-xs md:text-sm font-semibold md:font-medium transition duration-200 cursor-pointer ${
+                className={`flex items-center gap-1.5 md:gap-2 px-3.5 py-2 md:px-5 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm font-semibold transition-all duration-300 cursor-pointer select-none outline-none ${
                   isActive 
-                  ? "bg-teal-500 text-slate-950 shadow-md shadow-teal-500/10 font-bold" 
-                  : "text-slate-300 hover:text-white hover:bg-slate-800"
+                  ? "bg-gradient-to-r from-teal-400 to-emerald-400 text-slate-950 shadow-md shadow-teal-500/25 font-black tracking-wide transform scale-[1.02]" 
+                  : "text-slate-300 hover:text-white hover:bg-slate-800/80 hover:shadow-inner"
                 }`}
               >
-                <Icon className={`h-3.5 w-3.5 md:h-4.5 md:w-4.5 ${isActive ? "text-slate-950" : "text-slate-400"}`} />
+                <Icon className={`h-3.5 w-3.5 md:h-4.5 md:w-4.5 transition-colors ${isActive ? "text-slate-950" : "text-slate-400 group-hover:text-slate-300"}`} />
                 {tab.label}
               </button>
             );
@@ -4272,234 +4237,282 @@ _Empowered by ShaieAlam ERP Systems_`;
 
         {/* TAB 1: OVERVIEW DASHBOARD */}
         {activeTab === "dashboard" && (
-          <div className="space-y-4 md:space-y-6 animate-fadeIn">
-            
-            {/* Top Stat Cards Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-              {[
-                { title: activeTrans.todaysSales, value: `₹${totalSalesVal.toLocaleString()}`, change: "+14.2% today", icon: TrendingUp, color: "border-l-4 border-emerald-500" },
-                { title: activeTrans.pendingDues, value: `₹${totalPendingDues.toLocaleString()}`, change: "Owed to suppliers", icon: DollarSign, color: "border-l-4 border-amber-500" },
-                { title: activeTrans.activeCount, value: activeAnimalsCount.toString(), change: "Animals in pen", icon: Award, color: "border-l-4 border-blue-500" },
-                { title: activeTrans.lowStockAlerts, value: lowStockCount.toString(), change: "Display shortages", icon: AlertTriangle, color: "border-l-4 border-red-500" }
-              ].map((card, i) => {
-                const Icon = card.icon;
-                return (
-                  <div key={i} className={`bg-slate-950 p-3.5 md:p-5 rounded-xl md:rounded-2xl border border-slate-800 shadow-lg ${card.color}`}>
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-tight md:tracking-wider font-mono font-bold">{card.title}</p>
-                      <Icon className="h-4 w-4 md:h-5 md:w-5 text-slate-500 shrink-0" />
-                    </div>
-                    <div className="mt-2 md:mt-4 flex flex-col md:flex-row md:items-baseline justify-between gap-1">
-                      <h2 className="text-xl md:text-2xl lg:text-3xl font-black font-mono text-white leading-none">{card.value}</h2>
-                      <span className="text-[8px] md:text-[10px] text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded font-mono self-start md:self-auto">{card.change}</span>
-                    </div>
+          currentUser?.role === "Livestock Management" ? (
+            <div className="space-y-6 animate-fadeIn">
+              {/* Specialized Cattle Herd Dashboard Header */}
+              <div className="bg-gradient-to-r from-teal-900/30 via-slate-900 to-slate-950 p-6 rounded-3xl border border-teal-505/20 shadow-md">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[10px] text-teal-400 font-mono tracking-widest uppercase font-extrabold bg-teal-500/10 px-2 py-1 rounded border border-teal-500/20">Livestock Dept Control Panel</span>
+                    <h2 className="text-xl font-black text-white mt-1">Cattle Herd Management & Pen Operations</h2>
+                    <p className="text-xs text-slate-400 mt-0.5 font-sans">Real-time stats for grazing, feeding schedules, medical metrics, and on-site cattle audits.</p>
                   </div>
-                );
-              })}
-            </div>
- 
-            {/* Quick Command Control Panel */}
-            <div className="bg-slate-950 border border-slate-800 p-4 md:p-5 rounded-2xl md:rounded-3xl flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-              <div>
-                <h3 className="text-sm md:text-base font-bold text-white flex items-center gap-2 font-sans">
-                  <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-ping" />
-                  Quick POS Actions
-                </h3>
-                <p className="text-[11px] text-slate-450 text-slate-400 mt-0.5 font-sans">
-                  Speed up market operations for purchase logging and counter sales.
-                </p>
+                  <button
+                    onClick={() => checkPermissionAndRun("add-animal", () => setShowAddAnimalModal(true))}
+                    className="bg-teal-500 text-slate-950 hover:bg-teal-400 font-bold px-5 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer self-stretch md:self-auto font-sans"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    <span>Register New Cattle (AI Scanning Enabled)</span>
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                <button
-                  id="action-btn-add-animal"
-                  onClick={() => checkPermissionAndRun("add-animal", () => setShowAddAnimalModal(true))}
-                  className="bg-teal-500 text-slate-950 font-black px-3.5 py-2 rounded-lg hover:bg-teal-400 text-xs flex items-center gap-1.5 transition cursor-pointer flex-1 md:flex-none justify-center"
-                >
-                  <PlusCircle className="h-3.5 w-3.5" />
-                  {activeTrans.addAnimalBtn}
-                </button>
-                <button
-                  id="action-btn-billing"
-                  onClick={() => checkPermissionAndRun("retail-checkout", () => setShowBillingModal(true))}
-                  className="bg-white text-slate-950 font-black px-3.5 py-2 rounded-lg hover:bg-slate-100 text-xs flex items-center gap-1.5 transition cursor-pointer flex-1 md:flex-none justify-center"
-                >
-                  <ShoppingCart className="h-3.5 w-3.5" />
-                  {activeTrans.checkout}
-                </button>
-              </div>
-            </div>
 
-            {/* Two Column Layout: Smart Warnings and Local Live Displays */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              
-              {/* Left Smart Alerts column (2 cols span) */}
-              <div className="lg:col-span-2 space-y-6">
+              {/* Core Cattle Stats Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { title: "Total Active Herd", value: animals.filter(a => a.status !== "Processed").length.toString(), desc: "Cattle in pen state", icon: Award, color: "text-teal-400" },
+                  { title: "Average Herd Weight", value: `${Math.round(animals.filter(a => a.status !== "Processed").reduce((acc, a) => acc + (a.weightKg || 150), 0) / Math.max(1, animals.filter(a => a.status !== "Processed").length))} kg`, desc: "Live mass average", icon: Layers, color: "text-blue-400" },
+                  { title: "Excellent Welfare", value: animals.filter(a => a.status !== "Processed" && (a.healthCondition?.includes("10/") || a.healthCondition?.includes("9/") || a.healthCondition?.includes("8/"))).length.toString(), desc: "Optimal health rate", icon: Activity, color: "text-emerald-400" },
+                  { title: "Outstanding Supplier Dues", value: `₹${animals.reduce((acc, a) => acc + (a.due || 0), 0).toLocaleString()}`, desc: "Bazar and trader dues", icon: DollarSign, color: "text-amber-400" }
+                ].map((stat, i) => {
+                  const Icon = stat.icon;
+                  return (
+                    <div key={i} className="bg-slate-950 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-mono text-slate-400 font-black">{stat.title}</span>
+                        <div className={`p-1.5 bg-slate-900 border border-slate-800 rounded-lg ${stat.color}`}>
+                          <Icon className="h-4.5 w-4.5" />
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <h3 className="text-2xl font-black font-mono text-white leading-none">{stat.value}</h3>
+                        <p className="text-[9px] text-slate-500 font-mono mt-1">&bull; {stat.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Livestock Management Specific Content: Active Pen Map & Urgent Medical Alerts */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-teal-400" />
-                      Smart AI Operational Warnings & Insights
+                {/* Active Pen Roster */}
+                <div className="lg:col-span-2 bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-900 pb-3">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Layers3 className="h-4.5 w-4.5 text-teal-400" />
+                      Active Herd Roster / মূল রেজিস্ট্রি
                     </h3>
-                    <button 
-                      onClick={fetchSmartAlertsFromServer}
-                      disabled={generatingAlerts}
-                      className="text-xs text-teal-400 bg-slate-900 border border-slate-800 hover:bg-slate-800 px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition"
-                    >
-                      <RefreshCw className={`h-3 w-3 ${generatingAlerts ? 'animate-spin' : ''}`} />
-                      Analyze State
+                    <button onClick={() => setActiveTab("livestock")} className="text-teal-400 hover:text-teal-300 text-xs font-bold font-mono">
+                      View Advanced Herd Directory &rarr;
                     </button>
                   </div>
 
-                  <p className="text-xs text-slate-400 mb-6">
-                    Real-time operational alerts generated by Gemini AI analyzing your physical livestock pen stock levels, trade liabilities, and marketplace conditions.
-                  </p>
-
-                  <div className="space-y-3.5">
-                    {generatingAlerts ? (
-                      <div className="py-8 text-center text-slate-500 text-sm flex flex-col items-center justify-center gap-2">
-                        <RefreshCw className="h-6 w-6 animate-spin text-teal-400" />
-                        <span>{activeTrans.generatingAlerts}</span>
-                      </div>
-                    ) : (
-                      smartAlerts.map((alert, i) => {
-                        let alertColor = "bg-sky-500/10 text-sky-400 border-sky-500/20";
-                        if (alert.type === "danger") alertColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
-                        if (alert.type === "warning") alertColor = "bg-amber-500/10 text-amber-400 border-amber-500/20";
-
-                        return (
-                          <div 
-                            key={i} 
-                            onClick={() => alert.targetTab && setActiveTab(alert.targetTab)}
-                            className={`p-4 rounded-xl border flex items-start gap-3 transition cursor-pointer hover:scale-[1.01] duration-150 ${alertColor}`}
-                          >
-                            <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-                            <div>
-                              <p className="text-xs font-semibold leading-relaxed">
-                                {lang === 'en' ? alert.messageEn : alert.messageBn}
-                              </p>
-                              {alert.targetTab && (
-                                <span className="text-[10px] uppercase font-mono tracking-wider font-bold underline text-teal-400 hover:text-teal-300 block mt-1">
-                                  Go to {alert.targetTab} tab &rarr;
-                                </span>
-                              )}
+                  <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                    {animals.filter(a => a.status !== "Processed").map(animal => (
+                      <div 
+                        key={animal.id} 
+                        onClick={() => setViewingAnimalDetail(animal)}
+                        className="bg-slate-900 border border-slate-850 hover:border-teal-500/30 p-3 rounded-xl flex items-center justify-between gap-4 transition-all duration-150 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-11 w-11 rounded-lg bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center shrink-0">
+                            {animal.frontImage ? (
+                              <img src={animal.frontImage} alt="Cattle front" className="h-full w-full object-cover" />
+                            ) : (
+                              <Award className="h-5 w-5 text-teal-400" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-white font-mono">{animal.id}</span>
+                              <span className="px-1.5 py-0.5 bg-slate-950 text-teal-400 border border-teal-500/20 rounded font-mono text-[9px] font-bold">{animal.type}</span>
                             </div>
+                            <p className="text-[10px] text-slate-400 mt-0.5">Breed: <strong>{animal.breed}</strong> | Weight: <strong>{animal.weightKg} kg</strong></p>
                           </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-
-                {/* Dashboard Secondary Info: Live stock items display indicator block */}
-                <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      <Layers3 className="h-5 w-5 text-teal-400" />
-                      {activeTrans.meatDisplays}
-                    </h3>
-                    <LinkTab tab="retail" text="Sell Cuts &rarr;" />
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                    {Object.entries(meatStock).map(([key, rawQty]) => {
-                      const qty = rawQty as number;
-                      const percentage = Math.min(100, (qty / 100) * 100);
-                      let colorClass = "bg-teal-500";
-                      if (qty < 10) colorClass = "bg-rose-500";
-                      else if (qty < 20) colorClass = "bg-amber-500";
-
-                      return (
-                        <div key={key} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col justify-between">
-                          <span className="text-xs text-slate-400 font-mono uppercase">{key}</span>
-                          <div className="mt-2.5">
-                            <span className="text-xl font-bold font-mono text-white">{qty}</span>
-                            <span className="text-xs text-slate-400 font-mono font-bold"> kg</span>
-                          </div>
-                          <div className="w-full bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
-                            <div className={`h-full ${colorClass}`} style={{ width: `${percentage}%` }} />
-                          </div>
-                          {qty < 10 && (
-                            <span className="text-[9px] text-rose-400 bg-rose-500/10 rounded-md font-bold px-1.5 py-0.5 mt-2 text-center">
-                              Low Stock
-                            </span>
-                          )}
                         </div>
-                      );
-                    })}
+
+                        <div className="text-right">
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${
+                            animal.healthCondition?.includes("Sick") || animal.healthCondition?.includes("Critical")
+                              ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                              : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                          }`}>
+                            {animal.healthCondition || "Healthy"}
+                          </span>
+                          <p className="text-[9px] text-slate-400 font-mono mt-1">Age: {animal.ageMonths || 24} mo</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-              </div>
-
-              {/* Right secondary column: Bengali reference card + mini prediction view */}
-              <div className="space-y-6">
-                
-                {/* Bengali Quick Translator Cards */}
-                <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6">
-                  <h3 className="text-base font-bold text-white flex items-center gap-2 mb-4">
-                    <BookOpen className="h-5 w-5 text-teal-400" />
-                    {activeTrans.bengaliUiLabel}
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3.5 font-mono text-sm">
-                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
-                      <p className="text-[10px] text-slate-500 uppercase">পশু ক্রয় (Purchase)</p>
-                      <p className="font-bold text-white mt-1 text-base">ক্রয়</p>
+                {/* Herd Nutrition & Feeding Shifts Summary */}
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4">
+                  <div className="border-b border-slate-900 pb-3">
+                    <h4 className="text-xs uppercase tracking-wider font-extrabold text-teal-400 flex items-center gap-1.5">
+                      <Activity className="h-4 w-4 animate-pulse text-teal-400" />
+                      Welfare Feeding & Medicine Schedules
+                    </h4>
+                  </div>
+                  <div className="space-y-3.5 text-xs text-slate-300">
+                    <div className="p-3 bg-slate-900 border border-slate-850 rounded-xl space-y-1">
+                      <span className="font-bold text-white block text-[11px] uppercase text-teal-300">08:00 AM - Green Graze Shift</span>
+                      <p className="text-[10px] text-slate-400">Primary distribution of organic dry straw and mineral-infused green grass mix (4kg per adult cattle).</p>
                     </div>
-                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
-                      <p className="text-[10px] text-slate-500 uppercase">খুচরা বিক্রয় (Sale)</p>
-                      <p className="font-bold text-white mt-1 text-base">বিক্রয়</p>
+                    <div className="p-3 bg-slate-900 border border-slate-850 rounded-xl space-y-1">
+                      <span className="font-bold text-white block text-[11px] uppercase text-amber-500">12:30 PM - Veterinary Health Audit</span>
+                      <p className="text-[10px] text-slate-400">Regular on-pen temperature testing and anthelmintic medication checkups for pregnant heifers.</p>
                     </div>
-                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
-                      <p className="text-[10px] text-slate-500 uppercase">লাভের পরিমাণ (Profit)</p>
-                      <p className="font-bold text-emerald-400 mt-1 text-base">লাভ</p>
-                    </div>
-                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
-                      <p className="text-[10px] text-slate-500 uppercase">বকেয়া পাওনা (Due)</p>
-                      <p className="font-bold text-amber-400 mt-1 text-base">বাকি</p>
+                    <div className="p-3 bg-slate-900 border border-slate-850 rounded-xl space-y-1">
+                      <span className="font-bold text-white block text-[11px] uppercase text-teal-300">17:00 PM - Concentrates Shift</span>
+                      <p className="text-[10px] text-slate-400">Washed wheat bran, mustard oil cakes, and pulse husk concentrates distribution for optimal milk/meat content ratio.</p>
                     </div>
                   </div>
-                </div>
-
-                {/* Profit Prediction preview block */}
-                <div className="bg-gradient-to-br from-slate-950 to-slate-900 border border-teal-500/20 rounded-3xl p-6 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 h-24 w-24 bg-teal-500/5 rounded-full blur-2xl" />
-                  <span className="text-[10px] text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded-md font-bold px-2 py-0.5 uppercase tracking-wide">
-                    Live Mithun Strategy
-                  </span>
-                  
-                  <div className="mt-5 space-y-3.5 text-sm">
-                    <div className="flex justify-between border-b border-slate-800 pb-2">
-                      <span className="text-slate-400">Specimen Type</span>
-                      <span className="font-bold text-white">Mithun (গয়াল)</span>
-                    </div>
-                    <div className="flex justify-between border-b border-slate-800 pb-2">
-                      <span className="text-slate-400">Expected Yield</span>
-                      <span className="font-bold text-white font-mono">135 kg</span>
-                    </div>
-                    <div className="flex justify-between border-b border-slate-800 pb-2">
-                      <span className="text-slate-400">Expected Revenue</span>
-                      <span className="font-bold text-white font-mono">₹64,800</span>
-                    </div>
-                    <div className="flex justify-between pb-1">
-                      <span className="text-slate-400">Predicted Profit</span>
-                      <span className="font-black text-emerald-400 text-lg font-mono">₹14,200</span>
-                    </div>
-                  </div>
-
-                  <button 
-                    onClick={() => setActiveTab("ai-assistant")}
-                    className="w-full mt-4 text-center text-xs font-bold text-slate-950 bg-teal-500 hover:bg-teal-400 rounded-xl py-2.5 flex items-center justify-center gap-1.5 transition"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Predict Customize Breed
-                  </button>
                 </div>
 
               </div>
             </div>
-
-          </div>
+          ) : (
+            <div className="space-y-4 md:space-y-6 animate-fadeIn">
+              
+              {/* Top Stat Cards Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+                {[
+                  { title: activeTrans.todaysSales, value: `₹${totalSalesVal.toLocaleString()}`, change: "+14.2% today", icon: TrendingUp, glow: "shadow-emerald-500/5 hover:border-emerald-500/30", color: "text-emerald-400" },
+                  { title: activeTrans.pendingDues, value: `₹${totalPendingDues.toLocaleString()}`, change: "Owed to suppliers", icon: DollarSign, glow: "shadow-amber-500/5 hover:border-amber-500/30", color: "text-amber-400" },
+                  { title: activeTrans.activeCount, value: activeAnimalsCount.toString(), change: "Animals in pen", icon: Award, glow: "shadow-teal-500/5 hover:border-teal-500/30", color: "text-teal-400" },
+                  { title: activeTrans.lowStockAlerts, value: lowStockCount.toString(), change: "Display shortages", icon: AlertTriangle, glow: "shadow-rose-500/5 hover:border-rose-500/30", color: "text-rose-450" }
+                ].map((card, i) => {
+                  const Icon = card.icon;
+                  return (
+                    <div key={i} className={`bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/40 p-4 md:p-5 rounded-2xl border border-slate-800/85 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${card.glow}`}>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-wider font-mono font-bold">{card.title}</p>
+                        <div className={`p-1.5 md:p-2 rounded-lg bg-slate-900 border border-slate-800/80 ${card.color}`}>
+                          <Icon className="h-4 w-4 md:h-4.5 md:w-4.5 shrink-0" />
+                        </div>
+                      </div>
+                      <div className="mt-3 md:mt-5 flex flex-col md:flex-row md:items-baseline justify-between gap-1.5">
+                        <h2 className="text-xl md:text-2xl lg:text-3xl font-black font-mono text-white leading-none tracking-tight">{card.value}</h2>
+                        <span className="text-[8px] md:text-[10px] text-slate-400 bg-slate-900/80 px-2 py-0.5 border border-slate-850 rounded font-mono self-start md:self-auto">{card.change}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+  
+              {/* Quick Command Control Panel */}
+              <div className="bg-gradient-to-r from-slate-950 via-slate-950 to-slate-900/30 border border-slate-800/85 p-5 rounded-2xl md:rounded-3xl flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shadow-lg shadow-black/15">
+                <div>
+                  <h3 className="text-sm md:text-base font-bold text-white flex items-center gap-2 font-sans">
+                    <span className="h-2 w-2 rounded-full bg-teal-400 animate-pulse shadow-[0_0_8px_#2dd4bf]" />
+                    Quick POS Actions
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5 font-sans">
+                    Speed up market operations for purchase logging and counter sales.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2.5 w-full md:w-auto">
+                  <button
+                    id="action-btn-add-animal"
+                    onClick={() => checkPermissionAndRun("add-animal", () => setShowAddAnimalModal(true))}
+                    className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black px-4.5 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer flex-1 md:flex-none font-sans shadow-md shadow-teal-500/10 hover:shadow-teal-500/20"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    {activeTrans.addAnimalBtn}
+                  </button>
+                  <button
+                    id="action-btn-billing"
+                    onClick={() => checkPermissionAndRun("retail-checkout", () => setShowBillingModal(true))}
+                    className="bg-slate-900 hover:bg-slate-800 text-white font-bold border border-slate-800 hover:border-slate-700 px-4.5 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer flex-1 md:flex-none font-sans"
+                  >
+                    <ShoppingCart className="h-4 w-4 text-teal-450" />
+                    {activeTrans.checkout}
+                  </button>
+                </div>
+              </div>
+  
+              {/* Two Column Layout: Local Live Displays and Live Mithun Strategy */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                {/* Left Smart Alerts column (2 cols span) */}
+                <div className="lg:col-span-2 space-y-6">
+                  
+                  {/* Dashboard Secondary Info: Live stock items display indicator block */}
+                  <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Layers3 className="h-5 w-5 text-teal-400" />
+                        {activeTrans.meatDisplays}
+                      </h3>
+                      <LinkTab tab="retail" text="Sell Cuts &rarr;" />
+                    </div>
+  
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                      {Object.entries(meatStock).map(([key, rawQty]) => {
+                        const qty = rawQty as number;
+                        const percentage = Math.min(100, (qty / 100) * 100);
+                        let colorClass = "bg-teal-500";
+                        if (qty < 10) colorClass = "bg-rose-500";
+                        else if (qty < 20) colorClass = "bg-amber-500";
+  
+                        return (
+                          <div key={key} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col justify-between">
+                            <span className="text-xs text-slate-400 font-mono uppercase">{key}</span>
+                            <div className="mt-2.5">
+                              <span className="text-xl font-bold font-mono text-white">{qty}</span>
+                              <span className="text-xs text-slate-400 font-mono font-bold"> kg</span>
+                            </div>
+                            <div className="w-full bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+                              <div className={`h-full ${colorClass}`} style={{ width: `${percentage}%` }} />
+                            </div>
+                            {qty < 10 && (
+                              <span className="text-[9px] text-rose-400 bg-rose-500/10 rounded-md font-bold px-1.5 py-0.5 mt-2 text-center">
+                                Low Stock
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+  
+                </div>
+  
+                {/* Right secondary column: mini prediction view */}
+                <div className="space-y-6">
+  
+                  {/* Profit Prediction preview block */}
+                  <div className="bg-gradient-to-br from-slate-950 to-slate-900 border border-teal-500/20 rounded-3xl p-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 h-24 w-24 bg-teal-500/5 rounded-full blur-2xl" />
+                    <span className="text-[10px] text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded-md font-bold px-2 py-0.5 uppercase tracking-wide">
+                      Live Mithun Strategy
+                    </span>
+                    
+                    <div className="mt-5 space-y-3.5 text-sm">
+                      <div className="flex justify-between border-b border-slate-800 pb-2">
+                        <span className="text-slate-400">Specimen Type</span>
+                        <span className="font-bold text-white">Mithun (গয়াল)</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-800 pb-2">
+                        <span className="text-slate-400">Expected Yield</span>
+                        <span className="font-bold text-white font-mono">135 kg</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-800 pb-2">
+                        <span className="text-slate-400">Expected Revenue</span>
+                        <span className="font-bold text-white font-mono">₹64,800</span>
+                      </div>
+                      <div className="flex justify-between pb-1">
+                        <span className="text-slate-400">Predicted Profit</span>
+                        <span className="font-black text-emerald-400 text-lg font-mono">₹14,200</span>
+                      </div>
+                    </div>
+  
+                    <button 
+                      onClick={() => setActiveTab("ai-assistant")}
+                      className="w-full mt-4 text-center text-xs font-bold text-slate-950 bg-teal-500 hover:bg-teal-400 rounded-xl py-2.5 flex items-center justify-center gap-1.5 transition"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Predict Customize Breed
+                    </button>
+                  </div>
+  
+                </div>
+              </div>
+  
+            </div>
+          )
         )}
 
         {/* TAB 2: LIVESTOCK TRADE LOG */}
@@ -5036,7 +5049,7 @@ _Empowered by ShaieAlam ERP Systems_`;
             )}
 
           </div>
-          ) : renderAccessRestricted("Livestock Inventory & process counter", ["Administrator", "Livestock Manager"])
+          ) : renderAccessRestricted("Livestock Inventory & process counter", ["Administrator", "Livestock Management"])
         )}
 
         {/* TAB 3: RETAIL POINT OF SALES */}
@@ -6618,7 +6631,7 @@ _Empowered by ShaieAlam ERP Systems_`;
                 )}
 
             </div>
-          ) : renderAccessRestricted("Retail POS Sales billing counter", ["Administrator", "Retail Cashier"])
+          ) : renderAccessRestricted("Retail POS Sales billing counter", ["Administrator", "Collections"])
         )}
 
         {/* TAB 3B: CATTLE FEED & WELFARE DEPARTMENT */}
@@ -7098,7 +7111,7 @@ _Empowered by ShaieAlam ERP Systems_`;
               </div>
               
             </div>
-          ) : renderAccessRestricted("Nutritional Sacks Allocation and Welfare Counter", ["Administrator", "Livestock Manager"])
+          ) : renderAccessRestricted("Nutritional Sacks Allocation and Welfare Counter", ["Administrator", "Feed Shop"])
         )}
 
         {/* TAB 4: SHAREHOLDERS & CAPITAL INVESTMENTS */}
@@ -7483,246 +7496,188 @@ _Empowered by ShaieAlam ERP Systems_`;
             )}
 
           </div>
-          ) : renderAccessRestricted("Shareholders & Investor Capital Ledger", ["Administrator", "Investor"])
+          ) : renderAccessRestricted("Shareholders & Investor Capital Ledger", ["Administrator"])
         )}
 
-        {/* TAB 5: SMART AI ASSISTANT & SCIENTIFIC YIELD ESTIMATOR */}
+        {/* TAB 5: SCIENTIFIC YIELD ESTIMATOR */}
         {activeTab === "ai-assistant" && (
           isTabAllowed("ai-assistant", currentUser?.role) ? (
-            <div className="space-y-8 animate-fadeIn">
+            <div className="space-y-8 animate-fadeIn text-slate-100">
             
-            {/* Scientific carcass dressing calculator & Gemini Predictor */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              
-              <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl space-y-5">
-                <div className="border-b border-slate-900 pb-4">
-                  <h3 className="text-lg font-black text-white flex items-center gap-2">
-                    <Sparkles className="h-5.5 w-5.5 text-teal-400" />
-                    {activeTrans.aiEstimates}
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {activeTrans.aiEstimatesDesc}
-                  </p>
-                </div>
-
-                <div className="space-y-3.5 text-xs">
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-500 uppercase font-mono mb-1">Livestock Class</label>
-                      <select 
-                        value={predictInputs.type}
-                        onChange={(e) => {
-                          const selectedType = e.target.value;
-                          const breeds = getBreedsForType(selectedType);
-                          setPredictInputs({ ...predictInputs, type: selectedType, breed: breeds[0] });
-                        }}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-white"
-                      >
-                        <option value="Cow">Cattle / Cow (গরু)</option>
-                        <option value="Goat">Black Bengal Goat (ছাগল)</option>
-                        <option value="Buffalo">Buffalo (মহিষ)</option>
-                        <option value="Sheep">Sheep (ভেড়া)</option>
-                        <option value="Mithun">Mithun (গয়াল)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-500 uppercase font-mono mb-1">Breed / জাত</label>
-                      <select 
-                        value={predictInputs.breed}
-                        onChange={(e) => setPredictInputs({...predictInputs, breed: e.target.value})}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-white text-xs focus:outline-none"
-                      >
-                        {getBreedsForType(predictInputs.type).map((breed) => (
-                          <option key={breed} value={breed}>
-                            {breed}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+              {/* Scientific carcass dressing calculator */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                {/* Input Panel Card */}
+                <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl space-y-5">
+                  <div className="border-b border-slate-900 pb-4">
+                    <h3 className="text-lg font-black text-white flex items-center gap-2">
+                      <Scale className="h-5.5 w-5.5 text-teal-400" />
+                      Carcass Yield Calculator
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Calculate standard edible dressing yields and expected wholesale-to-retail cuts margins based on live animal weight and class coefficients.
+                    </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-500 uppercase font-mono mb-1">Live Weight (kg)</label>
-                      <input 
-                        type="number" 
-                        value={predictInputs.weightKg}
-                        onChange={(e) => setPredictInputs({...predictInputs, weightKg: e.target.value})}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-white text-center font-mono font-bold"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-500 uppercase font-mono mb-1">Purchase Valuation (₹)</label>
-                      <input 
-                        type="number" 
-                        value={predictInputs.purchasePrice}
-                        onChange={(e) => setPredictInputs({...predictInputs, purchasePrice: e.target.value})}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-teal-400 text-center font-mono font-bold"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-400 uppercase font-mono mb-1">Feed Regimen</label>
-                      <input 
-                        type="text" 
-                        value={predictInputs.feedType}
-                        onChange={(e) => setPredictInputs({...predictInputs, feedType: e.target.value})}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-400 uppercase font-mono mb-1">Age in Months</label>
-                      <input 
-                        type="text" 
-                        value={predictInputs.ageMonths}
-                        onChange={(e) => setPredictInputs({...predictInputs, ageMonths: e.target.value})}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-white font-mono text-center"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={runAiPreEstimate}
-                    disabled={predicting}
-                    className="w-full bg-teal-500 text-slate-950 hover:bg-teal-400 font-extrabold py-3.5 rounded-xl uppercase tracking-wider transition text-xs mt-3 cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${predicting ? 'animate-spin' : ''}`} />
-                    {predicting ? "Consulting Gemini Yield Model..." : activeTrans.calculateBtn}
-                  </button>
-
-                </div>
-              </div>
-
-              {/* Gemini Yield Results Display */}
-              <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl min-h-[400px] flex flex-col">
-                <h4 className="text-base font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-900 pb-2.5">
-                  <TrendingUp className="h-5 w-5 text-teal-400" />
-                  Predictive Analysis Report
-                </h4>
-
-                {predicting ? (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-4 text-slate-500 text-sm py-12">
-                    <span className="h-10 w-10 border-4 border-t-teal-500 border-r-transparent border-slate-800 rounded-full animate-spin" />
-                    <p className="font-mono text-center px-6">Gemini is synthesizing South Asian dressing metrics, breed constants & raw pricing...</p>
-                  </div>
-                ) : aiPrediction ? (
-                  <div className="space-y-5 flex-1 flex flex-col justify-between">
+                  <div className="space-y-3.5 text-xs">
                     
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
-                        <span className="text-[10px] text-slate-500 uppercase">Estimated Yield Weight</span>
-                        <p className="text-xl font-black text-white font-mono mt-1">{aiPrediction.expectedYieldKg} kg</p>
-                        <span className="text-[10px] text-teal-400 font-bold">({Math.round(aiPrediction.yieldRatio * 100)}% Dressing Rate)</span>
+                      <div>
+                        <label className="block text-slate-500 uppercase font-mono mb-1">Livestock Class</label>
+                        <select 
+                          value={predictInputs.type}
+                          onChange={(e) => {
+                            const selectedType = e.target.value;
+                            const breeds = getBreedsForType(selectedType);
+                            setPredictInputs({ ...predictInputs, type: selectedType, breed: breeds[0] });
+                          }}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-white"
+                        >
+                          <option value="Cow">Cattle / Cow (গরু)</option>
+                          <option value="Goat">Black Bengal Goat (ছাগল)</option>
+                          <option value="Buffalo">Buffalo (মহিষ)</option>
+                          <option value="Sheep">Sheep (ভেড়া)</option>
+                          <option value="Mithun">Mithun (গয়াল)</option>
+                        </select>
                       </div>
-                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
-                        <span className="text-[10px] text-slate-500 uppercase">Target Revenue</span>
-                        <p className="text-xl font-black text-emerald-400 font-mono mt-1">₹{aiPrediction.expectedRevenue.toLocaleString()}</p>
-                        <span className="text-[10px] text-slate-400 font-mono">Profit: ₹{aiPrediction.predictedProfit.toLocaleString()}</span>
+
+                      <div>
+                        <label className="block text-slate-500 uppercase font-mono mb-1">Breed / জাত</label>
+                        <select 
+                          value={predictInputs.breed}
+                          onChange={(e) => setPredictInputs({...predictInputs, breed: e.target.value})}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-white text-xs focus:outline-none"
+                        >
+                          {getBreedsForType(predictInputs.type).map((breed) => (
+                            <option key={breed} value={breed}>
+                              {breed}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
-                    {/* Breakdown listing */}
-                    <div className="space-y-2">
-                      <h5 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono">Retail Cuts Speculation</h5>
-                      <div className="space-y-1 max-h-[140px] overflow-y-auto">
-                        {aiPrediction.yieldBreakdown?.map((item: any, i: number) => (
-                          <div key={i} className="flex justify-between items-center bg-slate-905 border border-slate-900 p-2 text-xs font-mono rounded">
-                            <span className="text-slate-300 font-semibold">{item.item}</span>
-                            <span className="text-white">{item.quantityKg} kg • ₹{item.estimatedPricePerKg}/kg &rarr; ₹{item.subtotal}</span>
-                          </div>
-                        ))}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-slate-500 uppercase font-mono mb-1">Live Weight (kg)</label>
+                        <input 
+                          type="number" 
+                          value={predictInputs.weightKg}
+                          onChange={(e) => setPredictInputs({...predictInputs, weightKg: e.target.value})}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-white text-center font-mono font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-500 uppercase font-mono mb-1">Purchase Valuation (₹)</label>
+                        <input 
+                          type="number" 
+                          value={predictInputs.purchasePrice}
+                          onChange={(e) => setPredictInputs({...predictInputs, purchasePrice: e.target.value})}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-teal-400 text-center font-mono font-bold"
+                        />
                       </div>
                     </div>
 
-                    {/* Language specific advice */}
-                    <div className="p-3.5 bg-slate-900 rounded-xl text-xs space-y-2 border border-slate-800">
-                      <div className="flex justify-between border-b border-slate-800 pb-1 mb-1">
-                        <span className="text-teal-400 font-bold flex items-center gap-1">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Strategy Tips
-                        </span>
-                        <span className="text-stone-500 font-semibold font-mono uppercase">Bilingual Advisor</span>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-slate-400 uppercase font-mono mb-1">Feed Regimen</label>
+                        <input 
+                          type="text" 
+                          value={predictInputs.feedType}
+                          onChange={(e) => setPredictInputs({...predictInputs, feedType: e.target.value})}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-white"
+                        />
                       </div>
-                      <p className="text-slate-300 leading-relaxed font-sans">{aiPrediction.aiAnalysis}</p>
-                      <p className="text-slate-400 leading-relaxed pt-2 border-t border-slate-800/60 font-medium">{aiPrediction.bengaliAnalysis}</p>
+
+                      <div>
+                        <label className="block text-slate-400 uppercase font-mono mb-1">Age in Months</label>
+                        <input 
+                          type="text" 
+                          value={predictInputs.ageMonths}
+                          onChange={(e) => setPredictInputs({...predictInputs, ageMonths: e.target.value})}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white font-mono text-center"
+                        />
+                      </div>
                     </div>
+
+                    <button
+                      onClick={runAiPreEstimate}
+                      disabled={predicting}
+                      className="w-full bg-teal-500 text-slate-950 hover:bg-teal-400 font-extrabold py-3.5 rounded-xl uppercase tracking-wider transition text-xs mt-3 cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${predicting ? 'animate-spin' : ''}`} />
+                      {predicting ? "Processing Weights..." : "Calculate Yield"}
+                    </button>
 
                   </div>
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-600 font-mono">
-                    <Activity className="h-10 w-10 text-slate-700/60 mb-3 animate-pulse" />
-                    <p className="text-xs">Provide live weights to dynamically speculate carcasses, key wholesale-to-retail cuts, and target sales margins.</p>
-                  </div>
-                )}
+                </div>
+
+                {/* Calculation Output Panel Card */}
+                <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl min-h-[400px] flex flex-col">
+                  <h4 className="text-base font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-900 pb-2.5">
+                    <TrendingUp className="h-5 w-5 text-teal-400" />
+                    Estimation Output
+                  </h4>
+
+                  {predicting ? (
+                    <div className="flex-1 flex flex-col items-center justify-center gap-4 text-slate-500 text-sm py-12">
+                      <span className="h-10 w-10 border-4 border-t-teal-500 border-r-transparent border-slate-800 rounded-full animate-spin" />
+                      <p className="font-mono text-center px-6">Evaluating South Asian dressing coefficients, breed variables & current retail margin rate...</p>
+                    </div>
+                  ) : aiPrediction ? (
+                    <div className="space-y-5 flex-1 flex flex-col justify-between text-xs">
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                          <span className="text-[10px] text-slate-500 uppercase">Estimated Yield Weight</span>
+                          <p className="text-xl font-black text-white font-mono mt-1">{aiPrediction.expectedYieldKg} kg</p>
+                          <span className="text-[10px] text-teal-400 font-bold">({Math.round(aiPrediction.yieldRatio * 100)}% Dressing Rate)</span>
+                        </div>
+                        <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                          <span className="text-[10px] text-slate-500 uppercase">Target Revenue</span>
+                          <p className="text-xl font-black text-emerald-400 font-mono mt-1">₹{aiPrediction.expectedRevenue.toLocaleString()}</p>
+                          <span className="text-[10px] text-slate-400 font-mono">Profit: ₹{aiPrediction.predictedProfit.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Breakdown listing */}
+                      <div className="space-y-2">
+                        <h5 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono">Retail Cuts Breakup</h5>
+                        <div className="space-y-1 max-h-[140px] overflow-y-auto">
+                          {aiPrediction.yieldBreakdown?.map((item: any, i: number) => (
+                            <div key={i} className="flex justify-between items-center bg-slate-900 border border-slate-800 p-2 text-xs font-mono rounded">
+                              <span className="text-slate-300 font-semibold">{item.item}</span>
+                              <span className="text-white">{item.quantityKg} kg • ₹{item.estimatedPricePerKg}/kg &rarr; ₹{item.subtotal}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Regional Strategy Info */}
+                      <div className="p-3.5 bg-slate-900 rounded-xl text-xs space-y-2 border border-slate-800">
+                        <div className="flex justify-between border-b border-slate-800 pb-1 mb-1">
+                          <span className="text-teal-400 font-bold flex items-center gap-1">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Retail Strategy Advice
+                          </span>
+                        </div>
+                        <p className="text-slate-300 leading-relaxed font-sans">{aiPrediction.aiAnalysis}</p>
+                        <p className="text-slate-400 leading-relaxed pt-2 border-t border-slate-800/60 font-medium">{aiPrediction.bengaliAnalysis}</p>
+                      </div>
+
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-600 font-mono">
+                      <Activity className="h-10 w-10 text-slate-700/60 mb-3 animate-pulse" />
+                      <p className="text-xs">Provide live weight parameters and tap 'Calculate Yield' to instantly evaluate carcass dressed portions and target sales margins.</p>
+                    </div>
+                  )}
+                </div>
+
               </div>
 
             </div>
-
-            {/* Smart bilingual operational chatbot panel */}
-            <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 space-y-5">
-              <div className="border-b border-slate-900 pb-4">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-teal-400" />
-                  Bilingual Livestock & Counter Operations Advisor
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Resolve trade issues, disease prevention metrics, hygienic processing guidelines, or retail meat scaling tricks in English or Bengali.
-                </p>
-              </div>
-
-              {/* Chat history display */}
-              <div className="space-y-4 max-h-[300px] overflow-y-auto p-4 bg-slate-900/60 border border-slate-800 rounded-2xl">
-                {aiChatHistory.map((chat, i) => (
-                  <div key={i} className={`flex ${chat.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div className={`p-3.5 rounded-2xl max-w-xl text-xs leading-relaxed ${
-                      chat.role === "user" 
-                      ? "bg-teal-500 text-slate-950 font-bold" 
-                      : "bg-slate-800 text-slate-200"
-                    }`}>
-                      <p className="font-mono text-[9px] text-slate-400 uppercase tracking-widest font-extrabold mb-1">
-                        {chat.role === "user" ? "Retail Manager" : "ShaieAlam Expert Advisor"}
-                      </p>
-                      <p className="whitespace-pre-line">{chat.text}</p>
-                    </div>
-                  </div>
-                ))}
-                {answering && (
-                  <div className="flex justify-start">
-                    <div className="bg-slate-800 text-slate-400 p-3 rounded-xl text-xs italic font-mono animate-pulse">
-                      Gemini Expert is typing research reply...
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Input section */}
-              <form onSubmit={sendChatMessage} className="flex gap-3">
-                <input
-                  type="text"
-                  required
-                  placeholder={activeTrans.promptInput}
-                  value={aiChatQuery}
-                  onChange={(e) => setAiChatQuery(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-teal-500 text-white"
-                />
-                <button
-                  type="submit"
-                  disabled={answering}
-                  className="bg-teal-500 text-slate-950 px-5 rounded-xl font-bold flex items-center justify-center hover:bg-teal-400 transition"
-                >
-                  Ask
-                </button>
-              </form>
-
-            </div>
-
-          </div>
-          ) : renderAccessRestricted("Scientific AI Assistant & Yield Predictor", ["Administrator", "Livestock Manager", "Investor"])
+          ) : renderAccessRestricted("Scientific Yield Estimator", ["Administrator"])
         )}
 
         {/* TAB 6: BUTCHER SHOPS & OUTLETS SLAUGHTER COLS */}
@@ -7747,7 +7702,7 @@ _Empowered by ShaieAlam ERP Systems_`;
                 onUpdateDispatches={setButcherDispatches}
               />
             </div>
-          ) : renderAccessRestricted("Butcher Shops Outlet Tracker", ["Administrator", "Livestock Manager", "Retail Cashier"])
+          ) : renderAccessRestricted("Butcher Shops Outlet Tracker", ["Administrator", "Butcher Shop"])
         )}
 
       </main>
@@ -7939,6 +7894,33 @@ _Empowered by ShaieAlam ERP Systems_`;
                 </div>
               )}
 
+              {/* Color and Appearance auto-recording fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 uppercase mb-1 font-sans">Colour / গায়ের রঙ (Auto-recorded by AI)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Red-Brown, Black & White"
+                    value={newAnimal.color || ""}
+                    onChange={(e) => setNewAnimal({ ...newAnimal, color: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 uppercase mb-1 font-sans">Physical Appearance (Appearance / বাহ্যিক রূপ)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Robust hump, glossy coat"
+                    value={newAnimal.appearance || ""}
+                    onChange={(e) => setNewAnimal({ ...newAnimal, appearance: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white font-mono text-xs focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
               {/* Photo Upload Section */}
               <div className="space-y-2 border-t border-b border-slate-800 py-3">
                 <label className="block text-slate-300 uppercase text-[10px] tracking-wider font-extrabold flex items-center gap-1.5">
@@ -7984,6 +7966,133 @@ _Empowered by ShaieAlam ERP Systems_`;
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Teeth Photo Upload Block */}
+              <div className="bg-slate-950 p-3 border border-slate-800 rounded-2xl space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1 bg-teal-500/10 text-teal-400 rounded-lg">
+                    <Camera className="h-4 w-4 text-teal-400" />
+                  </span>
+                  <div>
+                    <label className="text-slate-300 font-bold uppercase tracking-wide text-[10px]">Cattle Teeth Photo / দাঁতের ছবি</label>
+                    <p className="text-[9px] text-slate-500 mt-0.5">Used by AI Veterinarian to track the cattle age via incisors.</p>
+                  </div>
+                </div>
+
+                <div className="relative group bg-slate-900 border border-slate-800 hover:border-teal-500/40 rounded-xl p-3 flex flex-col items-center justify-center text-center transition min-h-[90px] h-28 overflow-hidden">
+                  {teethImage ? (
+                    <>
+                      <img src={teethImage} alt="Teeth Preview" className="absolute inset-0 w-full h-full object-contain rounded-xl" />
+                      <div className="absolute inset-0 bg-slate-950/75 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-1">
+                        <span className="text-[9px] font-mono text-emerald-400 font-bold bg-slate-950 px-2 py-0.5 rounded border border-slate-805">Uploaded</span>
+                        <button
+                          type="button"
+                          onClick={() => setTeethImage("")}
+                          className="bg-rose-500 hover:bg-rose-600 text-white rounded-full p-1 text-[10px] px-2"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer p-2">
+                      <Camera className="h-5 w-5 text-teal-400 group-hover:text-teal-300 transition mb-1.5" />
+                      <span className="text-[10px] font-bold text-slate-300 block">Upload Teeth Photo</span>
+                      <span className="text-[9px] text-slate-500 block mt-0.5">Click to browse teeth photo/brush</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleCompressAndSetImage(f, setTeethImage);
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Premium AI Scan button */}
+              <div className="bg-slate-950 p-3.5 border border-teal-500/15 rounded-2xl text-center space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-teal-400 flex items-center gap-1">
+                    <Sparkles className="h-3.5 w-3.5 animate-pulse text-teal-400" />
+                    AI Diagnostics
+                  </span>
+                  <span className="text-[9px] text-slate-500 font-mono">Gemini Multimodal Pro</span>
+                </div>
+                <p className="text-[10px] text-left text-slate-400 leading-relaxed font-sans mt-1">
+                  Instruct veterinary vision model to auto-detect cattle breed, coat colors, and count permanent incisors to accurately log age in months.
+                </p>
+
+                <button
+                  type="button"
+                  disabled={isAnalyzingCattle || (!frontImage && !teethImage)}
+                  onClick={async () => {
+                    setIsAnalyzingCattle(true);
+                    setAiAnalysisResult("");
+                    try {
+                      const res = await fetch("/api/analyze-cattle", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          frontImage,
+                          teethImage,
+                          animalType: newAnimal.type || "Cow"
+                        })
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        setNewAnimal(prev => ({
+                          ...prev,
+                          breed: data.breed,
+                          color: data.color,
+                          appearance: data.appearance,
+                          ageMonths: data.ageMonths,
+                          birthDate: new Date(Date.now() - data.ageMonths * 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+                        }));
+                        setAiAnalysisResult(`Success! Detected ${data.breed} (${data.color}), Age: ~${data.ageMonths} months. Teeth: ${data.ageExplanation}`);
+                      } else {
+                        throw new Error("Analysis failed");
+                      }
+                    } catch (err) {
+                      setAiAnalysisResult("Error: Unable to connect to diagnostic server. Please verify connections.");
+                    } finally {
+                      setIsAnalyzingCattle(false);
+                    }
+                  }}
+                  className={`w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition select-none ${
+                    isAnalyzingCattle 
+                      ? "bg-slate-900 border border-slate-805 text-teal-450" 
+                      : (frontImage || teethImage)
+                        ? "bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black cursor-pointer shadow-md"
+                        : "bg-slate-900 border border-slate-850 text-slate-600 cursor-not-allowed"
+                  }`}
+                >
+                  {isAnalyzingCattle ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></span>
+                      <span>Veterinary AI Auditing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>{(!frontImage && !teethImage) ? "Upload Photos to Unlock AI Scan" : "Analyze Cattle via Gemini"}</span>
+                    </>
+                  )}
+                </button>
+
+                {aiAnalysisResult && (
+                  <div className={`text-left p-3 rounded-xl border leading-relaxed font-mono text-[10px] ${
+                    aiAnalysisResult.startsWith("Error") 
+                      ? "bg-rose-500/10 border-rose-500/25 text-rose-400" 
+                      : "bg-teal-500/5 border-teal-500/20 text-teal-300"
+                  }`}>
+                    {aiAnalysisResult}
+                  </div>
+                )}
               </div>
 
               {/* Bazar Purchase Tracking */}
@@ -8354,6 +8463,18 @@ _Empowered by ShaieAlam ERP Systems_`;
               </div>
             </div>
 
+            {/* AI Recorded Parameters Banner */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950 p-4 border border-teal-500/10 rounded-2xl">
+              <div>
+                <span className="block text-[8px] text-teal-400 uppercase tracking-widest font-extrabold mb-1">Cattle Colour (Recorded by AI)</span>
+                <span className="text-xs font-bold text-white block">{viewingAnimalDetail.color || "N/A (Standard Coat)"}</span>
+              </div>
+              <div>
+                <span className="block text-[8px] text-teal-400 uppercase tracking-widest font-extrabold mb-1">Physical Appearance / বাহ্যিক রূপ</span>
+                <span className="text-xs font-bold text-slate-350 block">{viewingAnimalDetail.appearance || "N/A (Standard posture and conformation)"}</span>
+              </div>
+            </div>
+
             {/* Husbandry & Medical History Sections */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-slate-950 border border-slate-850 rounded-2xl space-y-2.5">
@@ -8420,16 +8541,17 @@ _Empowered by ShaieAlam ERP Systems_`;
             <div className="space-y-3">
               <h5 className="text-[10px] uppercase text-slate-400 tracking-wider font-extrabold flex items-center gap-1.5">
                 <Camera className="h-4 w-4 text-teal-400" />
-                Multi-Angle Image Records / ৪টি কোণ থেকে প্রাণীর ছবি
+                Multi-Angle Image Records & Forensic Teeth Scan / প্রাণীর ছবি ও দাঁতের ফরেনসিক রেকর্ড
               </h5>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                 {[
-                  { label: "Front Image / সামনে", img: viewingAnimalDetail.frontImage },
-                  { label: "Left Side Image / বাম দিক", img: viewingAnimalDetail.leftSideImage },
-                  { label: "Right Side Image / ডান দিক", img: viewingAnimalDetail.rightSideImage },
-                  { label: "Backside Image / পেছনে", img: viewingAnimalDetail.backsideImage }
+                  { label: "Front / সামনে", img: viewingAnimalDetail.frontImage },
+                  { label: "Left / বাম দিক", img: viewingAnimalDetail.leftSideImage },
+                  { label: "Right / ডান দিক", img: viewingAnimalDetail.rightSideImage },
+                  { label: "Back / পেছনে", img: viewingAnimalDetail.backsideImage },
+                  { label: "Teeth / দাঁতের ফরেনসিক", img: viewingAnimalDetail.teethImage }
                 ].map((item, idx) => (
-                  <div key={idx} className="bg-slate-950 border border-slate-850 rounded-2xl p-2.5 flex flex-col items-center justify-center text-center min-h-[140px] relative overflow-hidden group">
+                  <div key={idx} className="bg-slate-950 border border-slate-850 rounded-2xl p-2 flex flex-col items-center justify-center text-center min-h-[140px] relative overflow-hidden group">
                     {item.img ? (
                       <>
                         <img 
