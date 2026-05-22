@@ -37,6 +37,20 @@ const handleAsync = (fn: (req: express.Request, res: express.Response, next: exp
     fn(req, res, next).catch(next);
   };
 
+// Keep track of quota-exhausted models with a cooldown period (15 minutes)
+const QUOTA_EXHAUSTED_COOLDOWN = 15 * 60 * 1000;
+const exhaustedModels = new Map<string, number>();
+
+function isModelExhausted(model: string): boolean {
+  if (!exhaustedModels.has(model)) return false;
+  const timestamp = exhaustedModels.get(model)!;
+  if (Date.now() - timestamp > QUOTA_EXHAUSTED_COOLDOWN) {
+    exhaustedModels.delete(model);
+    return false;
+  }
+  return true;
+}
+
 // Helper to perform Gemini API generation with retries & secondary fallback model
 async function generateContentWithRetry(
   ai: GoogleGenAI,
@@ -47,13 +61,21 @@ async function generateContentWithRetry(
   },
   maxRetries = 2
 ): Promise<any> {
-  // Try stable 3.5-flash first if primary model matched previous preview
+  // Use stable gemini-3.5-flash as the standard primary unless otherwise specified or it was preview
   const primaryModel = params.model === "gemini-3-flash-preview" ? "gemini-3.5-flash" : params.model;
-  const modelsToTry = Array.from(new Set([primaryModel, "gemini-3.1-flash-lite", "gemini-flash-latest"]));
   
+  // Set up the full candidate model list in premium order
+  const candidateModels = [primaryModel, "gemini-3.1-flash-lite", "gemini-flash-latest"];
+  
+  // Filter out models that are currently marked as exhausted, ensuring we keep at least one model to try
+  let modelsToTry = candidateModels.filter(m => !isModelExhausted(m));
+  if (modelsToTry.length === 0) {
+    modelsToTry = [candidateModels[candidateModels.length - 1]]; // fall back to the last option if all are marked exhausted
+  }
+
   for (let mIndex = 0; mIndex < modelsToTry.length; mIndex++) {
     const currentModel = modelsToTry[mIndex];
-    let delay = 600;
+    let delay = 300; // Reduced initial retry delay from 600ms to 300ms for faster client response
     const isPrimary = mIndex === 0;
     const modelRole = isPrimary ? "Primary model" : "Fallback model";
     
@@ -68,12 +90,19 @@ async function generateContentWithRetry(
         const is503 = error?.status === 503 || error?.statusCode === 503 || error?.message?.includes("503") || error?.message?.includes("UNAVAILABLE") || error?.message?.includes("high demand") || error?.message?.includes("temporary");
         const is429 = error?.status === 429 || error?.statusCode === 429 || error?.message?.includes("429") || error?.message?.includes("RESOURCE_EXHAUSTED") || error?.message?.includes("quota") || error?.message?.includes("Quota");
         
-        // If we hit a quota limit or rate-limiting block (429) and fallbacks are available, immediately fail over to the next model to ensure supreme UX speed
-        if (is429 && mIndex < modelsToTry.length - 1) {
-          console.warn(`[Gemini API] ${modelRole} "${currentModel}" rate-limited or quota exceeded. Switching immediately to fallback model "${modelsToTry[mIndex + 1]}".`);
-          break; // break retry loop for current model, proceed to the next fallback model
+        // If we hit a quota limit / RESOURCE_EXHAUSTED block, record it instantly to bypass it in future calls
+        if (is429) {
+          exhaustedModels.set(currentModel, Date.now());
+          
+          // Since quota errors are persistent for the minute/day, do NOT waste time retrying this model.
+          // Switch immediately to the next available fallback model in our candidate array.
+          if (mIndex < modelsToTry.length - 1) {
+            console.warn(`[Gemini API] ${modelRole} "${currentModel}" quota exceeded (429). Switching immediately to stable fallback model "${modelsToTry[mIndex + 1]}" without retries.`);
+            break; // break retry loop for current model, proceed to the next fallback model in the outer loop
+          }
         }
 
+        // For temporary 503 errors and 429 (only if no fallback model is left), retry with exponential backoff if possible.
         if ((is503 || is429) && attempt < maxRetries) {
           console.warn(`[Gemini API] ${modelRole} "${currentModel}" returned transient error (attempt ${attempt + 1}/${maxRetries + 1}). Retrying in ${delay}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delay));

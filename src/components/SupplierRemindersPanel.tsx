@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Bell, 
   Mail, 
@@ -13,12 +13,23 @@ import {
   ChevronDown,
   ChevronUp,
   Sliders,
-  Send
+  Send,
+  Globe,
+  ShieldAlert,
+  LogOut
 } from "lucide-react";
+import { User } from "firebase/auth";
+import { 
+  initAuth, 
+  googleSignIn, 
+  logoutGmail, 
+  sendGmailEmail,
+  getAccessToken
+} from "../lib/firebaseAuth";
 
 interface Animal {
   id: string;
-  type: "Cow" | "Sheep" | "Buffalo" | "Goat";
+  type: "Cow" | "Goat" | "Buffalo" | "Sheep" | "Mithun";
   breed: string;
   owner: string;
   weightKg: number;
@@ -75,8 +86,58 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
   setReminderLogs
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [showConfig, setShowConfig] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Supplier contact overrides
+  const [supplierEmails, setSupplierEmails] = useState<Record<string, string>>({});
+  const [supplierPhones, setSupplierPhones] = useState<Record<string, string>>({});
+
+  // Gmail OAuth login states
+  const [googleUser, setGoogleUser] = useState<User | null>(null);
+  const [googleToken, setGoogleToken] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (user, token) => {
+        setGoogleUser(user);
+        setGoogleToken(token);
+      },
+      () => {
+        setGoogleUser(null);
+        setGoogleToken(null);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    setIsLoggingIn(true);
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        setGoogleUser(result.user);
+        setGoogleToken(result.accessToken);
+        triggerToast("Successfully connected to your Google/Gmail account for sending notices!");
+      }
+    } catch (err: any) {
+      console.error(err);
+      triggerToast("Authentication cancelled or failed.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleGoogleSignOut = async () => {
+    try {
+      await logoutGmail();
+      setGoogleUser(null);
+      setGoogleToken(null);
+      triggerToast("Disconnected Gmail Account.");
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Filter animals that have outstanding supplier dues
   const dueAnimals = animals.filter(a => a.due > 0 && a.status !== "Processed" && a.status !== "Paid");
@@ -86,7 +147,7 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
   // Negative = due date in the past (e.g. -7 days equals 7 days after)
   const getDaysDiff = (dueDateStr?: string) => {
     if (!dueDateStr) return 0;
-    const today = new Date("2026-05-20T10:25:44Z"); // Use user current local time as benchmark
+    const today = new Date("2026-05-21T10:51:39Z"); // Use user current local time as benchmark
     today.setHours(0, 0, 0, 0);
     const due = new Date(dueDateStr + "T00:00:00");
     due.setHours(0, 0, 0, 0);
@@ -97,11 +158,15 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 4000);
   };
 
   // Trigger manual reminder send
-  const sendManualReminder = (animal: Animal, type: "Before" | "After" | "Instant", medium: "Email" | "SMS" | "Both") => {
+  const sendManualReminder = async (
+    animal: Animal, 
+    type: "Before" | "After" | "Instant", 
+    medium: "Email" | "SMS" | "Both"
+  ) => {
     const isSms = medium === "SMS" || medium === "Both";
     const isEmail = medium === "Email" || medium === "Both";
 
@@ -112,11 +177,33 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
       ? `${reminderConfig.daysAfter} Days After Overdue Alert` 
       : "Instant Manual Alert";
 
-    const channels = [];
-    if (isSms) channels.push("SMS");
-    if (isEmail) channels.push("Email");
+    const text = `Urgent Trade Notice for ${animal.owner}: outstanding supplier payment of ₹${animal.due.toLocaleString()} for ${animal.type} (${animal.id}) originally due on ${animal.dueDate || "N/A"}. Please settle the invoice.`;
 
-    const text = `Urgent Trade Notice for ${animal.owner}: outstanding payment of ₹${animal.due.toLocaleString()} for ${animal.type} (${animal.id}) originally due on ${animal.dueDate || "N/A"}. Please process payment immediately.`;
+    const destEmail = supplierEmails[animal.id] || `${animal.owner.toLowerCase().replace(/\s+/g, "")}@gmail.com`;
+    const destPhone = supplierPhones[animal.id] || "+880 1711-223344";
+
+    let finalStatus: "Sent" | "Failed" = "Sent";
+    const channels: string[] = [];
+
+    if (isSms) {
+      channels.push(`SMS to ${destPhone}`);
+    }
+
+    if (isEmail) {
+      if (googleToken) {
+        channels.push(`Gmail to ${destEmail}`);
+        const success = await sendGmailEmail(
+          destEmail,
+          `Outstanding Balance Reminder: Animal ${animal.id}`,
+          text
+        );
+        if (!success) {
+          finalStatus = "Failed";
+        }
+      } else {
+        channels.push(`Simulated Email to ${destEmail}`);
+      }
+    }
 
     const newLog: ReminderLog = {
       id: `REM-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 90 + 10)}`,
@@ -128,28 +215,33 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
       type: labelType,
       medium,
       sentAt: new Date().toLocaleString(),
-      status: "Sent",
-      messageText: text
+      status: finalStatus,
+      messageText: text + (googleToken ? "" : " (Simulation Mode - Sign in with Google to send actual emails)")
     };
 
     setReminderLogs(prev => [newLog, ...prev]);
-    triggerToast(`Alert sent successfully to ${animal.owner} via ${channels.join(" & ")}!`);
+    
+    if (finalStatus === "Sent") {
+      triggerToast(`Alert sent successfully via ${channels.join(" & ")}!`);
+    } else {
+      triggerToast(`Failed to send alert via Gmail. Check Google connection.`);
+    }
   };
 
   // Run the full automated sweep of reminders (simulated daily cron trigger)
-  const executeAutomatedRemindersRun = () => {
+  const executeAutomatedRemindersRun = async () => {
     let sentCount = 0;
+    let failedCount = 0;
     const newLogsToAdd: ReminderLog[] = [];
 
-    dueAnimals.forEach(animal => {
+    for (const animal of dueAnimals) {
       const daysDiff = getDaysDiff(animal.dueDate);
       
-      // Match 3 days before (daysDiff === 3) OR 7 days after (daysDiff === -7)
-      const isBeforeTrigger = reminderConfig.enableEmail || reminderConfig.enableSms ? daysDiff === reminderConfig.daysBefore : false;
-      const isAfterTrigger = reminderConfig.enableEmail || reminderConfig.enableSms ? daysDiff === -reminderConfig.daysAfter : false;
+      // Match daysBefore or daysAfter
+      const isBeforeTrigger = daysDiff === reminderConfig.daysBefore;
+      const isAfterTrigger = daysDiff === -reminderConfig.daysAfter;
 
       if (isBeforeTrigger || isAfterTrigger) {
-        // Prevent double alert if we already sent one of the same type in current logs
         const typeLabel = isBeforeTrigger 
           ? `${reminderConfig.daysBefore} Days Before Alert` 
           : `${reminderConfig.daysAfter} Days After Overdue Alert`;
@@ -161,8 +253,27 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
         if (!alreadySent) {
           const med = reminderConfig.reminderMedium;
           const text = isBeforeTrigger 
-            ? `Dear ${animal.owner}, this is an automated 3-day advance notice of outstanding dues of ₹${animal.due.toLocaleString()} for animal ${animal.id} due on ${animal.dueDate || "N/A"}.`
+            ? `Dear ${animal.owner}, this is an automated advance notice of outstanding dues of ₹${animal.due.toLocaleString()} for animal ${animal.id} due on ${animal.dueDate || "N/A"}.`
             : `Overdue Warning to ${animal.owner}: payment of ₹${animal.due.toLocaleString()} for animal ${animal.id} is now ${reminderConfig.daysAfter} days past due date (${animal.dueDate || "N/A"}). Please settle.`;
+
+          const destEmail = supplierEmails[animal.id] || `${animal.owner.toLowerCase().replace(/\s+/g, "")}@gmail.com`;
+          let finalStatus: "Sent" | "Failed" = "Sent";
+
+          if ((med === "Email" || med === "Both") && googleToken) {
+            const success = await sendGmailEmail(
+              destEmail,
+              `Scheduled Dues Notice: ${animal.id}`,
+              text
+            );
+            if (!success) {
+              finalStatus = "Failed";
+              failedCount++;
+            } else {
+              sentCount++;
+            }
+          } else {
+            sentCount++;
+          }
 
           newLogsToAdd.push({
             id: `AUTO-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 900 + 100)}`,
@@ -174,19 +285,18 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
             type: typeLabel,
             medium: med,
             sentAt: new Date().toLocaleString(),
-            status: "Sent",
-            messageText: text
+            status: finalStatus,
+            messageText: text + (googleToken ? "" : " (Simulated automated broadcast)")
           });
-          sentCount++;
         }
       }
-    });
+    }
 
     if (newLogsToAdd.length > 0) {
       setReminderLogs(prev => [...newLogsToAdd, ...prev]);
-      triggerToast(`Automated reminder sweep completed. Dispatched ${sentCount} reminders!`);
+      triggerToast(`Automated reminders run: Dispatched ${sentCount} reminders! ${failedCount > 0 ? `${failedCount} failed.` : ""}`);
     } else {
-      triggerToast("Reminder check complete. No new pending alerts matched current timeline criteria (3 days before or 7 days after).");
+      triggerToast("Automated sweep completed: No new pending alerts matched checklist criteria for 2026-05-21.");
     }
   };
 
@@ -209,7 +319,7 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5 font-sans">
-              Manage scheduled alert broadcasts before & after dueDate for animals with outstanding dues.
+              Request real-time Gmail broadcasts before & after purchase due dates for outstanding suppliers.
             </p>
           </div>
         </div>
@@ -233,6 +343,44 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
             </div>
           )}
 
+          {/* GOOGLE AUTO GMAIL CONNECT PANEL */}
+          <div className="bg-slate-950 border border-slate-850 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl border ${googleUser ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-slate-900 text-slate-400 border-slate-800"}`}>
+                <Mail className="h-4 w-4" />
+              </div>
+              <div className="text-left">
+                <span className="text-xs font-bold text-white block">Google Workspace Integration</span>
+                {googleUser ? (
+                  <p className="text-[11px] text-emerald-400">Connected as <strong>{googleUser.email}</strong></p>
+                ) : (
+                  <p className="text-[11px] text-slate-500">Sign in with Google to enable actual live Gmail sending alerts.</p>
+                )}
+              </div>
+            </div>
+
+            {googleUser ? (
+              <button
+                type="button"
+                onClick={handleGoogleSignOut}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-rose-550/15 hover:text-rose-400 text-slate-400 border border-slate-800 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Disconnect Account
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isLoggingIn}
+                onClick={handleGoogleSignIn}
+                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-slate-950 rounded-xl text-xs font-black shadow-lg transition cursor-pointer"
+              >
+                <Mail className="h-3.5 w-3.5" />
+                {isLoggingIn ? "Connecting..." : "Connect Custom Gmail Account"}
+              </button>
+            )}
+          </div>
+
           {/* Form and Trigger Controls */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
@@ -244,13 +392,13 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
                     <Sliders className="h-3.5 w-3.5 text-amber-500" />
                     <span>Configuration Parameters</span>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-mono">ADMIN PRIVILEGE</span>
+                  <span className="text-[10px] text-slate-500 font-mono">ADMIN SYSTEM</span>
                 </div>
 
                 <div className="space-y-4 text-xs">
                   {/* Channels Toggles */}
                   <div className="space-y-2">
-                    <label className="block text-[11px] text-slate-400 font-bold uppercase tracking-wider">Notification Medium</label>
+                    <label className="block text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Notification Medium</label>
                     <div className="grid grid-cols-3 gap-2">
                       {(["Email", "SMS", "Both"] as const).map((med) => (
                         <button
@@ -272,7 +420,7 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
                   {/* Offset Days Form */}
                   <div className="grid grid-cols-2 gap-4 pt-1">
                     <div className="space-y-1.5">
-                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
                         Days Before Alert
                       </label>
                       <div className="relative flex items-center">
@@ -286,11 +434,10 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
                         />
                         <span className="absolute right-2.5 text-[10px] text-slate-500 font-mono select-none">days</span>
                       </div>
-                      <p className="text-[9px] text-slate-500">Advance warning trigger.</p>
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
                         Days After Overdue
                       </label>
                       <div className="relative flex items-center">
@@ -304,17 +451,16 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
                         />
                         <span className="absolute right-2.5 text-[10px] text-slate-500 font-mono select-none">days</span>
                       </div>
-                      <p className="text-[9px] text-slate-500">Post-overdue notice trigger.</p>
                     </div>
                   </div>
 
                   <div className="border-t border-slate-900 pt-3.5 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-405 text-slate-400">Trigger {reminderConfig.daysBefore} days before:</span>
+                      <span className="text-slate-400">Trigger {reminderConfig.daysBefore} days before:</span>
                       <span className="text-emerald-400 font-bold">Enabled</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-405 text-slate-400">Trigger {reminderConfig.daysAfter} days after:</span>
+                      <span className="text-slate-400">Trigger {reminderConfig.daysAfter} days after:</span>
                       <span className="text-rose-400 font-bold">Enabled</span>
                     </div>
                   </div>
@@ -327,11 +473,11 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
                   onClick={executeAutomatedRemindersRun}
                   className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black text-xs py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-amber-950/30 cursor-pointer"
                 >
-                  <Play className="h-4 w-4 fill-current text-slate-950" />
+                  <Play className="h-4 w-4 fill-current text-slate-920 text-slate-950" />
                   Run Scheduled Reminders Sweep
                 </button>
-                <div className="text-center text-[9px] text-slate-505 text-slate-500 mt-2 font-mono">
-                  Benchmark Simulator Base: 2026-05-20 (Current Time Check)
+                <div className="text-center text-[9px] text-slate-500 mt-2 font-mono">
+                  Benchmark Base: 2026-05-21 • System Clock
                 </div>
               </div>
             </div>
@@ -344,15 +490,15 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
                     <Clock className="h-3.5 w-3.5 text-teal-400" />
                     <span>Animals Due Checklist ({dueAnimals.length})</span>
                   </div>
-                  <span className="text-[10px] text-[10px] text-slate-500 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded font-mono">2026-05-20</span>
+                  <span className="text-[10px] text-slate-500 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded font-mono">2026-05-21</span>
                 </div>
 
                 {dueAnimals.length === 0 ? (
                   <div className="p-10 border border-dashed border-slate-800 rounded-2xl text-center text-slate-500 text-xs font-mono">
-                    Perfect record! There are no outstanding supplier payables currently registered in trace queue.
+                    All supplier payables are currently settled!
                   </div>
                 ) : (
-                  <div className="space-y-2.5 max-h-[190px] overflow-y-auto pr-1">
+                  <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1">
                     {dueAnimals.map(animal => {
                       const daysDiff = getDaysDiff(animal.dueDate);
                       const isOverdue = daysDiff < 0;
@@ -361,46 +507,73 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
                       let adviceText = "Pending Timeline";
 
                       if (daysDiff === reminderConfig.daysBefore) {
-                        alertBadgeStyle = "bg-emerald-505/10 text-emerald-400 border border-emerald-500/20";
-                        adviceText = `${reminderConfig.daysBefore} Days Before Alert Trigger`;
+                        alertBadgeStyle = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                        adviceText = `${reminderConfig.daysBefore} Days Before Alert`;
                       } else if (daysDiff === -reminderConfig.daysAfter) {
-                        alertBadgeStyle = "bg-rose-505/10 text-rose-400 border border-rose-500/20";
-                        adviceText = `${reminderConfig.daysAfter} Days Overdue Alert Trigger`;
+                        alertBadgeStyle = "bg-rose-500/10 text-rose-400 border border-rose-500/20";
+                        adviceText = `${reminderConfig.daysAfter} Days Overdue Alert`;
                       } else if (isOverdue) {
-                        alertBadgeStyle = "bg-rose-950/20 text-rose-350 border border-rose-900/15";
+                        alertBadgeStyle = "bg-rose-950/20 text-rose-300 border border-rose-900/15";
                         adviceText = `${Math.abs(daysDiff)} Days Overdue`;
                       } else {
-                        adviceText = `${daysDiff} Days Until Due`;
+                        adviceText = `${daysDiff} Days Unto Due`;
                       }
+
+                      // Dynamic inputs
+                      const currentEmail = supplierEmails[animal.id] || `${animal.owner.toLowerCase().replace(/\s+/g, "")}@gmail.com`;
+                      const currentPhone = supplierPhones[animal.id] || "+880 1711-223344";
 
                       return (
                         <div 
                           key={animal.id}
-                          className="p-3 bg-slate-900/80 rounded-xl border border-slate-850 flex items-center justify-between text-xs font-mono hover:border-slate-700 transition"
+                          className="p-3 bg-slate-900/80 rounded-xl border border-slate-850 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs font-mono hover:border-slate-700 transition"
                         >
-                          <div className="space-y-1">
+                          <div className="space-y-1.5 flex-1">
                             <div className="flex items-center gap-1.5">
                               <span className="font-bold text-white text-xs">{animal.id}</span>
-                              <span className="text-[10px] text-slate-400 font-sans">({animal.owner})</span>
+                              <span className="text-[10px] text-slate-400 font-sans font-bold">({animal.owner})</span>
                             </div>
-                            <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                            <div className="flex flex-wrap gap-2 text-[10px] text-slate-450 text-slate-400">
                               <span>Due: ₹{animal.due.toLocaleString()}</span>
-                              <span className="text-slate-600">•</span>
-                              <span className="text-teal-400">{animal.dueDate || "N/A"}</span>
+                              <span className="text-slate-700">•</span>
+                              <span className="text-teal-400">D/D: {animal.dueDate || "N/A"}</span>
+                            </div>
+
+                            {/* Live Configurable Address/Contacts Inputs block */}
+                            <div className="flex flex-col gap-1.5 pt-1.5 border-t border-slate-900">
+                              <div className="flex items-center gap-1.5 text-[9.5px]">
+                                <span className="text-slate-500 font-sans w-8">Email:</span>
+                                <input 
+                                  type="email" 
+                                  value={currentEmail}
+                                  onChange={(e) => setSupplierEmails(prev => ({ ...prev, [animal.id]: e.target.value }))}
+                                  className="bg-slate-950 border border-slate-850 rounded px-1.5 py-0.5 text-slate-200 text-[9.5px] w-48 focus:outline-none focus:border-teal-500 font-sans" 
+                                />
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[9.5px]">
+                                <span className="text-slate-500 font-sans w-8">Phone:</span>
+                                <input 
+                                  type="text" 
+                                  value={currentPhone}
+                                  onChange={(e) => setSupplierPhones(prev => ({ ...prev, [animal.id]: e.target.value }))}
+                                  className="bg-slate-950 border border-slate-850 rounded px-1.5 py-0.5 text-slate-200 text-[9.5px] w-48 focus:outline-none focus:border-teal-500 font-sans" 
+                                />
+                              </div>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex md:flex-col items-end gap-2 shrink-0 border-t md:border-t-0 border-slate-850 pt-2 md:pt-0">
                             <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${alertBadgeStyle} font-sans`}>
                               {adviceText}
                             </span>
                             <button
                               type="button"
                               onClick={() => sendManualReminder(animal, daysDiff === reminderConfig.daysBefore ? "Before" : isOverdue ? "After" : "Instant", reminderConfig.reminderMedium)}
-                              className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 p-1.5 rounded-lg transition"
+                              className="bg-amber-500 text-slate-950 font-black hover:bg-amber-400 p-2 rounded-xl transition duration-150 flex items-center gap-1 text-[10px] cursor-pointer"
                               title="Force send manual notice now"
                             >
                               <Send className="h-3 w-3" />
+                              Send Notice
                             </button>
                           </div>
                         </div>
@@ -413,7 +586,7 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
               {/* Status footer inside Checklist */}
               <div className="border-t border-slate-900 pt-3 mt-3 text-[10px] text-slate-500 flex justify-between tracking-wide">
                 <span>SMS Provider Status: <strong className="text-emerald-400 font-mono">ONLINE</strong></span>
-                <span>Mailing Relay: <strong className="text-emerald-400 font-mono">SSL ACTIVE</strong></span>
+                <span>Gmail Relay: <strong className={`${googleToken ? "text-emerald-400" : "text-amber-500 animate-pulse"} font-mono`}>{googleToken ? "CONNECTED (REAL)" : "SIMULATOR ACTIVE"}</strong></span>
               </div>
             </div>
             
@@ -463,8 +636,8 @@ export const SupplierRemindersPanel: React.FC<SupplierRemindersPanelProps> = ({
                     <div className="flex sm:flex-col items-end gap-1.5 justify-between sm:justify-start">
                       <span className="text-[10px] text-slate-500 font-mono">{log.sentAt}</span>
                       <div className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                        <span className="text-[10px] text-emerald-400 font-bold uppercase">{log.status}</span>
+                        <span className={`w-1.5 h-1.5 ${log.status === "Sent" ? "bg-emerald-500" : "bg-rose-500"} rounded-full`}></span>
+                        <span className={`text-[10px] ${log.status === "Sent" ? "text-emerald-400" : "text-rose-400"} font-bold uppercase`}>{log.status}</span>
                         <span className="text-[9.5px] text-slate-400 bg-slate-950 px-1.5 py-0.2 rounded border border-slate-800 uppercase ml-1">
                           {log.medium}
                         </span>

@@ -22,6 +22,10 @@ import {
   XCircle,
   PiggyBank,
   Coins,
+  CreditCard,
+  Smartphone,
+  Wallet,
+  Clock,
   CheckCircle2,
   Calendar,
   Layers3,
@@ -43,10 +47,17 @@ import {
   Barcode,
   Zap,
   Camera,
-  Download
+  Download,
+  CheckCircle,
+  X,
+  History,
+  Wheat,
+  Scale,
+  Heart
 } from "lucide-react";
 
 import { SupplierRemindersPanel } from "./components/SupplierRemindersPanel";
+import { ButcherShopsSection } from "./components/ButcherShopsSection";
 
 // Indian Market Breed lists for different livestock classes
 export const COW_BREEDS = [
@@ -198,6 +209,7 @@ interface HealthRecord {
   cost: number;
   notes?: string;
   dueDate?: string;
+  doctorConsultationDate?: string;
 }
 
 interface BatchProcessLog {
@@ -234,6 +246,7 @@ interface Animal {
   feedType?: string;
   healthCondition?: string;
   notes?: string;
+  feedingSchedule?: string;
   dueDate?: string;
   isCached?: boolean;
   healthHistory?: HealthRecord[];
@@ -244,6 +257,12 @@ interface Animal {
   isFromBazar?: boolean;
   bazarReceiptImage?: string;
   bazarName?: string;
+  feedCost?: number;
+  medicineCost?: number;
+  maintenanceCost?: number;
+  handlingCost?: number;
+  slaughterNegotiatedPrice?: number;
+  slaughterProfitOrLoss?: number;
 }
 
 interface SaleItem {
@@ -328,13 +347,13 @@ function isTabAllowed(tabId: string, role?: UserRole): boolean {
   if (!role) return false;
   if (role === "Administrator") return true;
   if (role === "Livestock Manager") {
-    return tabId === "dashboard" || tabId === "livestock" || tabId === "ai-assistant";
+    return tabId === "dashboard" || tabId === "livestock" || tabId === "cattle-feed" || tabId === "butchers";
   }
   if (role === "Retail Cashier") {
-    return tabId === "dashboard" || tabId === "retail";
+    return tabId === "dashboard" || tabId === "retail" || tabId === "butchers" || tabId === "cattle-feed";
   }
   if (role === "Investor") {
-    return tabId === "dashboard" || tabId === "investors" || tabId === "ai-assistant";
+    return tabId === "dashboard" || tabId === "livestock" || tabId === "cattle-feed";
   }
   return false;
 }
@@ -345,10 +364,12 @@ const translations = {
     appTitle: "ShaieAlam LiveStock ERP",
     tagline: "Offline-Ready Livestock Trading & Meat Retail Counter",
     dashboard: "Overview Dashboard",
-    livestock: "Livestock Directory",
+    livestock: "Cattle Farm",
     retail: "Retail POS Counter",
     investments: "Shares & Investors",
     aiAssistant: "Smart AI Assistant",
+    butchers: "Butcher Shop",
+    cattleFeed: "Cattle Feed",
     todaysSales: "Today's Sales",
     pendingDues: "Pending Supplier Dues",
     activeCount: "Active Animals",
@@ -440,10 +461,12 @@ const translations = {
     appTitle: "শাইআলম লাইভস্টক ইআরপি",
     tagline: "অফলাইন-বান্ধব পশু ক্রয়-বিক্রয় ও খুচরা মাংসের হিসাব",
     dashboard: "ড্যাশবোর্ড ওভারভিউ",
-    livestock: "পশু ক্রয় রেকর্ড",
+    livestock: "ক্যাটেল ফার্ম (পশু খামার)",
     retail: "খুচরা মিট কাউন্টার",
     investments: "বিনিয়োগ ও অংশীদার",
     aiAssistant: "স্মার্ট এআই সহকারী",
+    butchers: "বাচার শপ (কসাইখানা)",
+    cattleFeed: "ক্যাটেল ফিড (পশুর খাদ্য)",
     todaysSales: "আজকের মোট বিক্রয়",
     pendingDues: "সরবরাহকারীর বকেয়া পাওনা",
     activeCount: "জীবیت পশু মজুদ",
@@ -550,6 +573,7 @@ const initialAnimals: Animal[] = [
     birthDate: "2024-05-15", 
     dueDate: "2026-05-25",
     healthCondition: "Excellent",
+    feedingSchedule: "07:30 AM: Rye Grass, 04:00 PM: Silage with dry straw & 2.5kg concentrates",
     healthHistory: [
       { id: "HLT-101", date: "2026-05-16", event: "Routine Vaccination", treatment: "FMD Vaccine", vetName: "Vet Dr. Rahman", cost: 1500, notes: "Healthy head. Next booster dose recommended in 6 months." }
     ]
@@ -569,6 +593,7 @@ const initialAnimals: Animal[] = [
     ageMonths: 12, 
     birthDate: "2025-05-18",
     healthCondition: "Good",
+    feedingSchedule: "Ad-libitum grazing, Evening: 200g grain mix with mineral blocks",
     healthHistory: []
   },
   { 
@@ -587,6 +612,7 @@ const initialAnimals: Animal[] = [
     birthDate: "2023-05-10", 
     dueDate: "2026-05-18",
     healthCondition: "Under treatment",
+    feedingSchedule: "06:00 AM: Green Napier grass, 12:00 PM: Straw soak, 05:00 PM: Concentrates & Cottonseed cake",
     healthHistory: [
       { id: "HLT-102", date: "2026-05-12", event: "Deworming Cycle", treatment: "Ivermectin Oral Sol.", vetName: "Vet Dr. Rahman", cost: 600, notes: "Successful deworming. Appetite improved." }
     ]
@@ -664,9 +690,36 @@ const initialInvestorsData = [
   { name: "Imran", balance: 40000, profitEarned: 3500 },
 ];
 
+export function triggerCSVDownload<T>(
+  data: T[],
+  columns: { header: string; accessor: (row: T) => any }[],
+  fileName: string
+) {
+  const headers = columns.map(col => `"${col.header.replace(/"/g, '""')}"`).join(",");
+  const rows = data.map(row => {
+    return columns.map(col => {
+      const val = col.accessor(row);
+      const strVal = val === null || val === undefined ? "" : String(val);
+      return `"${strVal.replace(/"/g, '""')}"`;
+    }).join(",");
+  });
+
+  const csvString = [headers, ...rows].join("\n font-sans \n").replace(/\n font-sans \n/g, "\n");
+  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+  
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute("download", fileName);
+  link.style.visibility = "hidden";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 export default function ShaieAlamDashboard() {
   const [lang, setLang] = useState<"en" | "bn">("en");
-  const [activeTab, setActiveTab] = useState<"dashboard" | "livestock" | "retail" | "investors" | "ai-assistant">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "livestock" | "retail" | "investors" | "ai-assistant" | "butchers" | "cattle-feed">("dashboard");
 
   // User Authentication State
   const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
@@ -786,6 +839,197 @@ export default function ShaieAlamDashboard() {
     return saved ? JSON.parse(saved) : initialInvestorsData;
   });
 
+  const [butcherDispatches, setButcherDispatches] = useState(() => {
+    const saved = localStorage.getItem("mf_butcher_dispatches");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse butcher dispatches", e);
+      }
+    }
+    return [
+      {
+        id: "DSP-001",
+        animalId: "ANI-001",
+        animalType: "Cow",
+        breed: "Jersey Cross",
+        liveWeight: 280,
+        shopName: "Dhanmondi Traditional Cutters",
+        dispatchDate: "2026-05-19",
+        estimatedYield: 162.4, // 58%
+        dressingPercentage: 58,
+        actualYield: 165.2,
+        actualBones: 40.5,
+        actualOrgans: 12.0,
+        status: "Completed",
+        slaughterDate: "2026-05-20",
+        notes: "Excellent muscle definition. Yield exceeded estimates by 2.8kg."
+      },
+      {
+        id: "DSP-002",
+        animalId: "ANI-003",
+        animalType: "Buffalo",
+        breed: "Murrah",
+        liveWeight: 380,
+        shopName: "Mirpur Meat Depot",
+        dispatchDate: "2026-05-20",
+        estimatedYield: 209.0, // 55%
+        dressingPercentage: 55,
+        status: "Pending Slaughter",
+        notes: "Scheduled for morning slaughter cycle."
+      }
+    ];
+  });
+
+  const [payoutLogs, setPayoutLogs] = useState(() => {
+    const saved = localStorage.getItem("mf_payout_logs");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse payout logs", e);
+      }
+    }
+    return [
+      {
+        id: "PAY-001",
+        date: "2026-05-10",
+        totalProfit: 15400,
+        type: "Cash Distribution",
+        split: [
+          { name: "Anis", percentage: 50.5, amount: 7782 },
+          { name: "Rafiq", percentage: 28.2, amount: 4341 },
+          { name: "Imran", percentage: 21.3, amount: 3277 }
+        ]
+      }
+    ];
+  });
+
+  // Departmental states for Cattle Feed & Internal Transfers
+  const [feedStock, setFeedStock] = useState<any[]>(() => {
+    const saved = localStorage.getItem("mf_feed_stock");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.length > 0 && parsed[0].category) {
+          return parsed;
+        }
+      } catch (e) { console.error(e); }
+    }
+    return [
+      { id: "FEED-001", type: "Rice Bran", category: "Feed", sackCount: 45, sackWeightKg: 50, unitCostPerSack: 950, sellingPricePerSack: 1200, supplier: "Savar Agribusiness" },
+      { id: "FEED-002", type: "Wheat Bran", category: "Feed", sackCount: 30, sackWeightKg: 45, unitCostPerSack: 1400, sellingPricePerSack: 1750, supplier: "Bogura Feed Mill" },
+      { id: "FEED-003", type: "Mustard Oil Cake", category: "Feed", sackCount: 25, sackWeightKg: 40, unitCostPerSack: 1100, sellingPricePerSack: 1400, supplier: "Tejgaon Food & Grain" },
+      { id: "FEED-004", type: "Maize Barley Mash", category: "Feed", sackCount: 50, sackWeightKg: 50, unitCostPerSack: 1200, sellingPricePerSack: 1550, supplier: "Aftab Feed Products" },
+      { id: "FEED-005", type: "Grass Hay Bales", category: "Feed", sackCount: 60, sackWeightKg: 20, unitCostPerSack: 300, sellingPricePerSack: 450, supplier: "Savar Agribusiness" },
+      { id: "FEED-006", type: "Liquid Calcium Syrup", category: "Medicine", sackCount: 100, sackWeightKg: 1, unitCostPerSack: 180, sellingPricePerSack: 240, supplier: "ACI Animal Health" },
+      { id: "FEED-007", type: "Dewormer Broad-Spectrum", category: "Medicine", sackCount: 80, sackWeightKg: 0.5, unitCostPerSack: 120, sellingPricePerSack: 160, supplier: "Square Vet Pharma" },
+      { id: "FEED-008", type: "Vitamin AD3H Syrup", category: "Medicine", sackCount: 60, sackWeightKg: 1, unitCostPerSack: 250, sellingPricePerSack: 335, supplier: "Incepta Vet Care" },
+      { id: "FEED-009", type: "FMD Vaccine Vials", category: "Medicine", sackCount: 40, sackWeightKg: 0.2, unitCostPerSack: 600, sellingPricePerSack: 800, supplier: "ACI Animal Health" }
+    ];
+  });
+
+  const [feedSubTab, setFeedSubTab] = useState<"inventory" | "sales" | "customers" | "transactions">("inventory");
+  const [feedCustomers, setFeedCustomers] = useState<any[]>(() => {
+    const saved = localStorage.getItem("mf_feed_customers");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
+    return [
+      { id: "CUST-F01", name: "Rahat Ali (Dairy Eco)", phone: "+880 1715-112233", village: "Savar Dairy Zone", totalPurchased: 48000, dueAmount: 5000 },
+      { id: "CUST-F02", name: "Kabir Hossain (Green Agro)", phone: "+880 1912-445566", village: "Bogura Farmstead", totalPurchased: 35000, dueAmount: 0 },
+      { id: "CUST-F03", name: "Jasim Uddin (Local Stock)", phone: "+880 1511-778899", village: "Ashulia Fields", totalPurchased: 12000, dueAmount: 2200 },
+      { id: "CUST-F04", name: "Mofizul Islam (Mofiz Farms)", phone: "+880 1813-001122", village: "Dhamrai Green", totalPurchased: 24000, dueAmount: 4000 }
+    ];
+  });
+
+  const [feedStoreSales, setFeedStoreSales] = useState<any[]>(() => {
+    const saved = localStorage.getItem("mf_feed_store_sales");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
+    return [
+      {
+        id: "FSL-001",
+        customerName: "Rahat Ali (Dairy Eco)",
+        customerPhone: "+880 1715-112233",
+        date: "2026-05-20",
+        items: [
+          { feedId: "FEED-001", feedType: "Rice Bran", quantitySacks: 10, pricePerSack: 1200, subtotal: 12000 },
+          { feedId: "FEED-003", feedType: "Mustard Oil Cake", quantitySacks: 5, pricePerSack: 1400, subtotal: 7000 }
+        ],
+        totalAmount: 19000,
+        amountPaid: 14000,
+        amountDue: 5000,
+        paymentMethod: "bKash"
+      },
+      {
+        id: "FSL-002",
+        customerName: "Kabir Hossain (Green Agro)",
+        customerPhone: "+880 1912-445566",
+        date: "2026-05-21",
+        items: [
+          { feedId: "FEED-002", feedType: "Wheat Bran", quantitySacks: 20, pricePerSack: 1750, subtotal: 35000 }
+        ],
+        totalAmount: 35000,
+        amountPaid: 35000,
+        amountDue: 0,
+        paymentMethod: "Cash"
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("mf_feed_customers", JSON.stringify(feedCustomers));
+  }, [feedCustomers]);
+
+  useEffect(() => {
+    localStorage.setItem("mf_feed_store_sales", JSON.stringify(feedStoreSales));
+  }, [feedStoreSales]);
+
+  const [feedAllocations, setFeedAllocations] = useState<any[]>(() => {
+    const saved = localStorage.getItem("mf_feed_allocations");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
+    return [
+      { id: "ALL-001", animalId: "ANI-001", feedType: "Rye Grass", quantityKg: 5, cost: 90, allocatedDate: "2026-05-18" },
+      { id: "ALL-002", animalId: "ANI-001", feedType: "Oat Silage", quantityKg: 10, cost: 212.5, allocatedDate: "2026-05-19" },
+      { id: "ALL-003", animalId: "ANI-003", feedType: "Wheat Bran", quantityKg: 15, cost: 420, allocatedDate: "2026-05-20" }
+    ];
+  });
+
+  const [farmTransactions, setFarmTransactions] = useState<any[]>(() => {
+    const saved = localStorage.getItem("mf_farm_transactions");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
+    return [
+      { id: "TX-001", animalId: "ANI-001", animalType: "Cow", breed: "Jersey Cross", purchasePrice: 65000, cumulativeWelfareCost: 3000, negotiatedPrice: 75000, netProfit: 7000, date: "2026-05-20" }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("mf_feed_stock", JSON.stringify(feedStock));
+  }, [feedStock]);
+
+  useEffect(() => {
+    localStorage.setItem("mf_feed_allocations", JSON.stringify(feedAllocations));
+  }, [feedAllocations]);
+
+  useEffect(() => {
+    localStorage.setItem("mf_farm_transactions", JSON.stringify(farmTransactions));
+  }, [farmTransactions]);
+
+  useEffect(() => {
+    localStorage.setItem("mf_payout_logs", JSON.stringify(payoutLogs));
+  }, [payoutLogs]);
+
+  useEffect(() => {
+    localStorage.setItem("mf_butcher_dispatches", JSON.stringify(butcherDispatches));
+  }, [butcherDispatches]);
+
   const [batchLogs, setBatchLogs] = useState<BatchProcessLog[]>(() => {
     const saved = localStorage.getItem("mf_batch_process_logs");
     return saved ? JSON.parse(saved) : [];
@@ -858,6 +1102,156 @@ export default function ShaieAlamDashboard() {
     if (!effectiveOnline) {
       setCachedQueue(prev => [...prev, description]);
     }
+  };
+
+  // Profit distribution states & actions
+  const [distributeProfitAmount, setDistributeProfitAmount] = useState("");
+  const [reinvestProfitAmount, setReinvestProfitAmount] = useState(false);
+  const [showDistributionModal, setShowDistributionModal] = useState(false);
+
+  const handleShowDistributionConfirm = () => {
+    const profitVal = Number(distributeProfitAmount) || 0;
+    if (profitVal <= 0) {
+      alert("Please enter a valid profit amount to distribute.");
+      return;
+    }
+    const totalCapital = investors.reduce((sum, inv) => sum + inv.balance, 0);
+    if (totalCapital <= 0) {
+      alert("No active capital pool balance available to calculate splits. Please make a deposit first.");
+      return;
+    }
+    setShowDistributionModal(true);
+  };
+
+  const handleConfirmDistribution = () => {
+    const profitVal = Number(distributeProfitAmount) || 0;
+    if (profitVal <= 0) return;
+
+    const totalCapital = investors.reduce((sum, inv) => sum + inv.balance, 0);
+    if (totalCapital <= 0) return;
+
+    const calculatedSplits = investors.map(inv => {
+      const pct = (inv.balance / totalCapital) * 100;
+      const amt = (inv.balance / totalCapital) * profitVal;
+      return {
+        name: inv.name,
+        percentage: Math.round(pct * 10) / 10,
+        amount: Math.round(amt)
+      };
+    });
+
+    setInvestors(prev => prev.map(inv => {
+      const splitItem = calculatedSplits.find(s => s.name === inv.name);
+      if (splitItem) {
+        return {
+          ...inv,
+          balance: reinvestProfitAmount ? inv.balance + splitItem.amount : inv.balance,
+          profitEarned: inv.profitEarned + splitItem.amount
+        };
+      }
+      return inv;
+    }));
+
+    const newPayoutLog = {
+      id: `PAY-${Date.now().toString().slice(-4)}`,
+      date: new Date().toISOString().split("T")[0],
+      totalProfit: profitVal,
+      type: reinvestProfitAmount ? "Capital Reinvestment" : "Cash Dividend Distribution",
+      split: calculatedSplits
+    };
+
+    setPayoutLogs(prev => [newPayoutLog, ...prev]);
+    recordOfflineChange(`Distributed profit dividend: ₹${profitVal} distributed. Mode: ${newPayoutLog.type}`);
+
+    if (!reinvestProfitAmount) {
+      setCashBalance(prev => Math.max(0, prev - profitVal));
+    }
+
+    setDistributeProfitAmount("");
+    setShowDistributionModal(false);
+  };
+
+  const handleExportLivestockCSV = () => {
+    const columns = [
+      { header: "Animal ID", accessor: (row: Animal) => row.id },
+      { header: "Type", accessor: (row: Animal) => row.type },
+      { header: "Breed", accessor: (row: Animal) => row.breed },
+      { header: "Live Weight (kg)", accessor: (row: Animal) => row.weightKg },
+      { header: "Purchase Price (₹)", accessor: (row: Animal) => row.purchasePrice },
+      { header: "Advance Paid (₹)", accessor: (row: Animal) => row.advancePaid },
+      { header: "Pending Due (₹)", accessor: (row: Animal) => row.due },
+      { header: "Status", accessor: (row: Animal) => row.status },
+      { header: "Owner / Supplier", accessor: (row: Animal) => row.owner },
+      { header: "Date Added", accessor: (row: Animal) => row.dateAdded },
+      { header: "Due Date", accessor: (row: Animal) => row.dueDate || "" },
+      { header: "Age (Months)", accessor: (row: Animal) => row.ageMonths || "" }
+    ];
+
+    triggerCSVDownload(filteredAnimals, columns, `livestock_directory_export_${new Date().toISOString().split("T")[0]}.csv`);
+  };
+
+  const handleExportSalesCSV = () => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const todayTime = new Date(todayStr + "T00:00:00").getTime();
+
+    const listToExport = sales.filter(sale => {
+      const matchesSearch = 
+        sale.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        sale.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        sale.customerPhone.includes(searchQuery);
+
+      const sVal = sale.amountDue || 0;
+      const matchesStatus = 
+        collectionFilterStatus === "All" ? true :
+        collectionFilterStatus === "Overdue" ? sVal > 0 && sale.dueDate && sale.dueDate < todayStr :
+        collectionFilterStatus === "Upcoming" ? sVal > 0 && ((sale.dueDate && sale.dueDate >= todayStr) || (sale.nextCollectionDate && sale.nextCollectionDate >= todayStr)) :
+        collectionFilterStatus === "Settled" ? sVal === 0 && (sale.installments || []).length > 0 :
+        true;
+
+      let matchesDueDate = true;
+      if (collectionDueDateFilter !== "All") {
+        if (sVal <= 0 || !sale.dueDate) {
+          matchesDueDate = false;
+        } else {
+          const saleTime = new Date(sale.dueDate + "T00:00:00").getTime();
+          const diffMs = saleTime - todayTime;
+          const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000));
+          if (collectionDueDateFilter === "Overdue") {
+            matchesDueDate = sale.dueDate < todayStr;
+          } else if (collectionDueDateFilter === "Within7") {
+            matchesDueDate = sale.dueDate >= todayStr && diffDays >= 0 && diffDays <= 7;
+          } else if (collectionDueDateFilter === "Within30") {
+            matchesDueDate = sale.dueDate >= todayStr && diffDays >= 0 && diffDays <= 30;
+          }
+        }
+      }
+
+      let matchesCategory = true;
+      if (collectionFilterCategory !== "All") {
+        matchesCategory = sale.items.some(it => it.category === collectionFilterCategory);
+      }
+
+      return matchesSearch && matchesStatus && matchesDueDate && matchesCategory;
+    });
+
+    const columns = [
+      { header: "Invoice ID", accessor: (row: any) => row.id },
+      { header: "Customer Name", accessor: (row: any) => row.customerName },
+      { header: "Customer Code", accessor: (row: any) => row.customerCode },
+      { header: "Customer Phone", accessor: (row: any) => row.customerPhone },
+      { header: "Purchase Date", accessor: (row: any) => row.date },
+      { 
+        header: "Cuts Breakdown", 
+        accessor: (row: any) => row.items.map((it: any) => `${it.category.toUpperCase()} (${it.qty}kg x ₹${it.price})`).join(" | ") 
+      },
+      { header: "Gross Total (₹)", accessor: (row: any) => row.totalAmount },
+      { header: "Amount Paid (₹)", accessor: (row: any) => row.amountPaid },
+      { header: "Outstanding Due (₹)", accessor: (row: any) => row.amountDue },
+      { header: "Final Due Date", accessor: (row: any) => row.dueDate || "N/A" },
+      { header: "Scheduled Follow-up", accessor: (row: any) => row.nextCollectionDate || "N/A" }
+    ];
+
+    triggerCSVDownload(listToExport, columns, `pos_sales_collection_export_${new Date().toISOString().split("T")[0]}.csv`);
   };
 
   const checkPermissionAndRun = (
@@ -1480,7 +1874,19 @@ export default function ShaieAlamDashboard() {
   const [selectedInvoice, setSelectedInvoice] = useState<Sale | null>(null);
 
   // Money Collections Outstanding Ledger States
-  const [retailSubTab, setRetailSubTab] = useState<"counter" | "collections" | "customers">("counter");
+  const [retailSubTab, setRetailSubTab] = useState<"counter" | "collections" | "customers" >("counter");
+  const [feedPosCustSelect, setFeedPosCustSelect] = useState<string>("WalkIn");
+  const [feedPosCustName, setFeedPosCustName] = useState<string>("");
+  const [feedPosCustPhone, setFeedPosCustPhone] = useState<string>("");
+  const [feedPosCustVillage, setFeedPosCustVillage] = useState<string>("");
+  const [feedPosSelectedFeedId, setFeedPosSelectedFeedId] = useState<string>("");
+  const [feedPosQtySacks, setFeedPosQtySacks] = useState<string>("");
+  const [feedPosAmountPaid, setFeedPosAmountPaid] = useState<string>("");
+  const [feedPosPaymentMethod, setFeedPosPaymentMethod] = useState<string>("Cash");
+  const [showFeedInvoiceModel, setShowFeedInvoiceModel] = useState<boolean>(false);
+  const [selectedFeedStoreSale, setSelectedFeedStoreSale] = useState<any>(null);
+  const [paymentRecCustId, setPaymentRecCustId] = useState<string | null>(null);
+  const [paymentRecAmount, setPaymentRecAmount] = useState<string>("");
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [activeCollectionSale, setActiveCollectionSale] = useState<Sale | null>(null);
   const [collectionFilterStatus, setCollectionFilterStatus] = useState<string>("All");
@@ -1511,7 +1917,8 @@ export default function ShaieAlamDashboard() {
     ageMonths: 24,
     notes: "",
     dueDate: "2026-05-27",
-    dateAdded: new Date().toISOString().split("T")[0]
+    dateAdded: new Date().toISOString().split("T")[0],
+    feedingSchedule: "Morning: 08:30 AM Green grass, Afternoon: Bran & Husk wash"
   });
 
   const [frontImage, setFrontImage] = useState<string>("");
@@ -1576,6 +1983,7 @@ export default function ShaieAlamDashboard() {
   const [healthNotes, setHealthNotes] = useState("");
   const [healthDate, setHealthDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [healthDueDate, setHealthDueDate] = useState("");
+  const [doctorConsultationDate, setDoctorConsultationDate] = useState("");
   const [healthConditionUpdate, setHealthConditionUpdate] = useState("Good");
   const [editingHealthRecord, setEditingHealthRecord] = useState<HealthRecord | null>(null);
   const [editingAnimal, setEditingAnimal] = useState<Animal | null>(null);
@@ -1583,6 +1991,29 @@ export default function ShaieAlamDashboard() {
   const [showEditAnimalModal, setShowEditAnimalModal] = useState(false);
   const [healthSubView, setHealthSubView] = useState<"list" | "form">("list");
   const [healthGroupMode, setHealthGroupMode] = useState<"none" | "date" | "event">("event");
+
+  // Cattle Feed allocation form states
+  const [allocateAnimalId, setAllocateAnimalId] = useState("");
+  const [allocateFeedId, setAllocateFeedId] = useState("");
+  const [allocateQtyKg, setAllocateQtyKg] = useState("");
+  
+  // Custom welfare logging input state variables
+  const [welfareAnimalId, setWelfareAnimalId] = useState("");
+  const [welfareLogType, setWelfareLogType] = useState<"Medicine" | "Maintenance" | "Handling">("Medicine");
+  const [welfareCostAmt, setWelfareCostAmt] = useState("");
+  const [welfareDescription, setWelfareDescription] = useState("");
+
+  // Feed Purchase form states
+  const [newFeedType, setNewFeedType] = useState("");
+  const [newFeedSackCount, setNewFeedSackCount] = useState("");
+  const [newFeedSackWeight, setNewFeedSackWeight] = useState("25");
+  const [newFeedUnitCost, setNewFeedUnitCost] = useState("");
+  const [newFeedSupplier, setNewFeedSupplier] = useState("");
+
+  // Slaughter Interdepartmental Negotiation Modal states
+  const [negotiationActiveAnimal, setNegotiationActiveAnimal] = useState<Animal | null>(null);
+  const [negotiatedInternalPrice, setNegotiatedInternalPrice] = useState("");
+  const [negotiationNotes, setNegotiationNotes] = useState("");
 
   const [reminderConfig, setReminderConfig] = useState({
     enableEmail: true,
@@ -1764,6 +2195,16 @@ export default function ShaieAlamDashboard() {
     fetchSmartAlertsFromServer();
   }, [animals.length, sales.length]);
 
+  const handleUpdateAnimalStatusFromButcher = (animalId: string, status: "Processed") => {
+    setAnimals(prev => prev.map(ani => {
+      if (ani.id === animalId) {
+        return { ...ani, status };
+      }
+      return ani;
+    }));
+    recordOfflineChange(`Processed animal ${animalId} via Butcher Shop slaughter`);
+  };
+
   // Add Animal submit
   const handleAddAnimal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1793,6 +2234,7 @@ export default function ShaieAlamDashboard() {
         ageMonths: computedAgeMonths,
         birthDate: computedBirthDate,
         notes: newAnimal.notes,
+        feedingSchedule: newAnimal.feedingSchedule || "",
         dueDate: calculatedDue > 0 ? (newAnimal.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]) : undefined,
         isCached: !effectiveOnline,
         frontImage: frontImage || undefined,
@@ -1834,7 +2276,8 @@ export default function ShaieAlamDashboard() {
         ageMonths: 24,
         notes: "",
         dueDate: "",
-        dateAdded: new Date().toISOString().split("T")[0]
+        dateAdded: new Date().toISOString().split("T")[0],
+        feedingSchedule: ""
       });
     });
   };
@@ -1895,6 +2338,372 @@ export default function ShaieAlamDashboard() {
     });
   };
 
+  // 1. Record Feed Purchase to Inventory Stock
+  const handleRecordFeedPurchase = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFeedType) return;
+    const count = Number(newFeedSackCount) || 1;
+    const wt = Number(newFeedSackWeight) || 25;
+    const cost = Number(newFeedUnitCost) || 0;
+    
+    const newItem = {
+      id: `FEED-${Math.floor(100 + Math.random() * 900)}`,
+      type: newFeedType,
+      sackCount: count,
+      sackWeightKg: wt,
+      unitCostPerSack: cost,
+      supplier: newFeedSupplier || "Raw Material Market"
+    };
+
+    setFeedStock([...feedStock, newItem]);
+    setNewFeedType("");
+    setNewFeedSackCount("");
+    setNewFeedUnitCost("");
+    setNewFeedSupplier("");
+  };
+
+  // 2. Allocate Feed to specific Animal in Cattle Farm
+  const handleAllocateFeedSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!allocateAnimalId || !allocateFeedId || !allocateQtyKg) return;
+
+    const qty = Number(allocateQtyKg);
+    if (qty <= 0) return;
+
+    const feedItem = feedStock.find(f => f.id === allocateFeedId);
+    if (!feedItem) return;
+
+    // Calculate cost: count is qty / sackWeight
+    const sackFrac = qty / (feedItem.sackWeightKg || 25);
+    const costAllocated = Math.round(sackFrac * feedItem.unitCostPerSack);
+
+    // Update animal's feed cost
+    setAnimals(animals.map(a => {
+      if (a.id === allocateAnimalId) {
+        return {
+          ...a,
+          feedCost: (a.feedCost || 0) + costAllocated,
+          feedType: feedItem.type
+        };
+      }
+      return a;
+    }));
+
+    // Deduct feed stock sacks
+    setFeedStock(feedStock.map(f => {
+      if (f.id === allocateFeedId) {
+        return {
+          ...f,
+          sackCount: Math.max(0, parseFloat((f.sackCount - sackFrac).toFixed(2)))
+        };
+      }
+      return f;
+    }));
+
+    // Record allocation log
+    const newAllocLog = {
+      id: `ALL-${Math.floor(1000 + Math.random() * 9000)}`,
+      animalId: allocateAnimalId,
+      feedType: feedItem.type,
+      quantityKg: qty,
+      cost: costAllocated,
+      allocatedDate: new Date().toISOString().split("T")[0]
+    };
+
+    setFeedAllocations([newAllocLog, ...feedAllocations]);
+    setAllocateQtyKg("");
+    
+    // Add transaction or audit trace to offline log
+    if (!effectiveOnline) {
+      recordOfflineChange(`Allocated ${qty}kg of ${feedItem.type} to animal ${allocateAnimalId} (Cost: ₹${costAllocated})`);
+    }
+  };
+
+  // 3. Log Extra Welfare Parameters (Medicine, Maintenance, Handling)
+  const handleLogExtraWelfareSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!welfareAnimalId || !welfareCostAmt) return;
+
+    const amount = Number(welfareCostAmt) || 0;
+    if (amount <= 0) return;
+
+    setAnimals(animals.map(a => {
+      if (a.id === welfareAnimalId) {
+        if (welfareLogType === "Medicine") {
+          const updatedHist = a.healthHistory || [];
+          const healthLog = {
+            id: `HLT-${Math.floor(1000 + Math.random() * 9000)}`,
+            date: new Date().toISOString().split("T")[0],
+            event: "Medicine/Welfare Injection",
+            treatment: welfareDescription || "Special Supplement/Care",
+            vetName: "Internal Staff",
+            cost: amount,
+            notes: "Logged via Cattle Welfare Centre"
+          };
+          return {
+            ...a,
+            medicineCost: (a.medicineCost || 0) + amount,
+            healthHistory: [...updatedHist, healthLog]
+          };
+        } else if (welfareLogType === "Maintenance") {
+          return {
+            ...a,
+            maintenanceCost: (a.maintenanceCost || 0) + amount,
+            notes: `${a.notes || ""}\n[Maint Log: ₹${amount} - ${welfareDescription || "Facility maintenance"}]`.trim()
+          };
+        } else if (welfareLogType === "Handling") {
+          return {
+            ...a,
+            handlingCost: (a.handlingCost || 0) + amount,
+            notes: `${a.notes || ""}\n[Handling Log: ₹${amount} - ${welfareDescription || "Handling Labor"}]`.trim()
+          };
+        }
+      }
+      return a;
+    }));
+
+    setWelfareCostAmt("");
+    setWelfareDescription("");
+  };
+
+  // 3b. Cattle Feed Store Front: Process POS Checkout
+  const handleFeedPOSCheckoutSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedPosSelectedFeedId || !feedPosQtySacks) return;
+
+    const qty = Number(feedPosQtySacks);
+    if (qty <= 0) return;
+
+    const feedItem = feedStock.find(f => f.id === feedPosSelectedFeedId);
+    if (!feedItem) return;
+
+    if (feedItem.sackCount < qty) {
+      alert(`Insufficient stock! Standard inventory only has ${feedItem.sackCount} remaining.`);
+      return;
+    }
+
+    // Determine customer info
+    let finalCustName = "";
+    let finalCustPhone = "";
+    let finalCustVillage = "";
+
+    if (feedPosCustSelect === "WalkIn") {
+      finalCustName = feedPosCustName.trim() || "Walk-In Customer";
+      finalCustPhone = feedPosCustPhone.trim() || "+880 ----";
+      finalCustVillage = feedPosCustVillage.trim() || "Local Trade";
+    } else {
+      const existing = feedCustomers.find(c => c.id === feedPosCustSelect);
+      if (existing) {
+        finalCustName = existing.name;
+        finalCustPhone = existing.phone;
+        finalCustVillage = existing.village;
+      } else {
+        finalCustName = "Walk-In Customer";
+        finalCustPhone = "+880 ----";
+        finalCustVillage = "Local Trade";
+      }
+    }
+
+    const price = feedItem.sellingPricePerSack || Math.round(feedItem.unitCostPerSack * 1.25);
+    const total = qty * price;
+    const paid = Number(feedPosAmountPaid) || 0;
+    const due = Math.max(0, total - paid);
+
+    // Update stock count
+    setFeedStock(feedStock.map(f => {
+      if (f.id === feedPosSelectedFeedId) {
+        return {
+          ...f,
+          sackCount: parseFloat((f.sackCount - qty).toFixed(2))
+        };
+      }
+      return f;
+    }));
+
+    // Update customer total purchases and dues if selected
+    if (feedPosCustSelect !== "WalkIn") {
+      setFeedCustomers(feedCustomers.map(c => {
+        if (c.id === feedPosCustSelect) {
+          return {
+            ...c,
+            totalPurchased: (c.totalPurchased || 0) + total,
+            dueAmount: (c.dueAmount || 0) + due
+          };
+        }
+        return c;
+      }));
+    } else if (feedPosCustName.trim()) {
+      // Create a new registered customer if they provided details
+      const newCustId = `CUST-F${Math.floor(100 + Math.random() * 900)}`;
+      const newCust = {
+        id: newCustId,
+        name: finalCustName,
+        phone: finalCustPhone,
+        village: finalCustVillage,
+        totalPurchased: total,
+        dueAmount: due
+      };
+      setFeedCustomers(prev => [...prev, newCust]);
+    }
+
+    // Increase system cash on hand
+    if (paid > 0) {
+      setCashBalance(prev => prev + paid);
+    }
+
+    // Record invoice
+    const newInvoice = {
+      id: `FSL-${Math.floor(1000 + Math.random() * 9000)}`,
+      customerName: finalCustName,
+      customerPhone: finalCustPhone,
+      date: new Date().toISOString().split("T")[0],
+      items: [
+        {
+          feedId: feedItem.id,
+          feedType: feedItem.type,
+          quantitySacks: qty,
+          pricePerSack: price,
+          subtotal: total
+        }
+      ],
+      totalAmount: total,
+      amountPaid: paid,
+      amountDue: due,
+      paymentMethod: feedPosPaymentMethod
+    };
+
+    setFeedStoreSales([newInvoice, ...feedStoreSales]);
+    setSelectedFeedStoreSale(newInvoice);
+    setShowFeedInvoiceModel(true);
+
+    // Reset checkout form fields
+    setFeedPosQtySacks("");
+    setFeedPosAmountPaid("");
+    setFeedPosCustName("");
+    setFeedPosCustPhone("");
+    setFeedPosCustVillage("");
+
+    // Audit logs
+    recordOfflineChange(`Sold retail ${qty} units of ${feedItem.type} to ${finalCustName} for ₹${total} (Cash received: ₹${paid})`);
+  };
+
+  // 3c. Cattle Feed Store Front: Record customer payment installments
+  const handleCollectFeedDueSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentRecCustId || !paymentRecAmount) return;
+
+    const amt = Number(paymentRecAmount);
+    if (amt <= 0) return;
+
+    const customer = feedCustomers.find(c => c.id === paymentRecCustId);
+    if (!customer) return;
+
+    const actualRec = Math.min(customer.dueAmount, amt);
+
+    setFeedCustomers(feedCustomers.map(c => {
+      if (c.id === paymentRecCustId) {
+        return {
+          ...c,
+          dueAmount: c.dueAmount - actualRec
+        };
+      }
+      return c;
+    }));
+
+    // Update sales records to credit this customer's feed transaction
+    setFeedStoreSales(feedStoreSales.map(s => {
+      if (s.customerName === customer.name && s.amountDue > 0 && actualRec > 0) {
+        // Simple decrement on the first due sale
+        const applyAmt = Math.min(s.amountDue, actualRec);
+        return {
+          ...s,
+          amountPaid: s.amountPaid + applyAmt,
+          amountDue: s.amountDue - applyAmt
+        };
+      }
+      return s;
+    }));
+
+    // Increase system cash on hand
+    setCashBalance(prev => prev + actualRec);
+    
+    setPaymentRecCustId(null);
+    setPaymentRecAmount("");
+
+    recordOfflineChange(`Collected ₹${actualRec} cash installment on feed account for ${customer.name}`);
+  };
+
+  // 4. Commit Slaughter Interdepartmental Price Negotiation and Transfer to dispatch
+  const handleCommitNegotiationSlaughter = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!negotiationActiveAnimal) return;
+
+    const purchasePrice = negotiationActiveAnimal.purchasePrice || 0;
+    const fCost = negotiationActiveAnimal.feedCost || 0;
+    const mCost = (negotiationActiveAnimal.medicineCost || 0) + (negotiationActiveAnimal.healthHistory || []).reduce((sum, h) => sum + (h.cost || 0), 0);
+    const mtCost = negotiationActiveAnimal.maintenanceCost || 0;
+    const hCost = negotiationActiveAnimal.handlingCost || 0;
+    const totalBaseCost = purchasePrice + fCost + mCost + mtCost + hCost;
+
+    const negotiatedPrice = Number(negotiatedInternalPrice) || totalBaseCost;
+    const netProfit = negotiatedPrice - totalBaseCost;
+
+    // A. Add to Cattle Farm P&L transactions ledger
+    const newTx = {
+      id: `TX-${Math.floor(1000 + Math.random() * 9000)}`,
+      animalId: negotiationActiveAnimal.id,
+      animalType: negotiationActiveAnimal.type,
+      breed: negotiationActiveAnimal.breed,
+      purchasePrice,
+      cumulativeWelfareCost: fCost + mCost + mtCost + hCost,
+      negotiatedPrice,
+      netProfit,
+      date: new Date().toISOString().split("T")[0]
+    };
+
+    setFarmTransactions([newTx, ...farmTransactions]);
+
+    // B. Transition animal's status
+    setAnimals(animals.map(a => {
+      if (a.id === negotiationActiveAnimal.id) {
+        return {
+          ...a,
+          status: "Processed",
+          slaughterNegotiatedPrice: negotiatedPrice,
+          slaughterProfitOrLoss: netProfit
+        };
+      }
+      return a;
+    }));
+
+    // C. Create Dispatch for the Butcher Shop
+    const estimatedDressingYield = Math.round(negotiationActiveAnimal.weightKg * 0.58);
+    const newDispatch = {
+      id: `DSP-${Math.floor(100 + Math.random() * 900)}`,
+      animalId: negotiationActiveAnimal.id,
+      animalType: negotiationActiveAnimal.type,
+      breed: negotiationActiveAnimal.breed,
+      liveWeight: negotiationActiveAnimal.weightKg,
+      shopName: "Central Slaughter Unit (Internal)",
+      dispatchDate: new Date().toISOString().split("T")[0],
+      estimatedYield: estimatedDressingYield,
+      dressingPercentage: 58,
+      status: "Pending Slaughter",
+      notes: `Internally negotiated from Cattle Farm at ₹${negotiatedPrice.toLocaleString()}. (Profit Booked: ₹${netProfit.toLocaleString()})`
+    };
+
+    setButcherDispatches([newDispatch, ...butcherDispatches]);
+
+    // Cleanup & Close UI
+    setNegotiationActiveAnimal(null);
+    setNegotiatedInternalPrice("");
+    setNegotiationNotes("");
+
+    if (!effectiveOnline) {
+      recordOfflineChange(`Negotiated slaughter pricing for animal ${negotiationActiveAnimal.id} at ₹${negotiatedPrice}`);
+    }
+  };
+
   // Add dynamic health record to animal history
   const handleAddHealthRecord = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1914,7 +2723,8 @@ export default function ShaieAlamDashboard() {
             vetName: healthVetName || "Internal Staff/None",
             cost: Number(healthCost) || 0,
             notes: healthNotes,
-            dueDate: healthDueDate || undefined
+            dueDate: healthDueDate || undefined,
+            doctorConsultationDate: doctorConsultationDate || undefined
           };
         }
         return rec;
@@ -1929,7 +2739,8 @@ export default function ShaieAlamDashboard() {
         vetName: healthVetName || "Internal Staff/None",
         cost: Number(healthCost) || 0,
         notes: healthNotes,
-        dueDate: healthDueDate || undefined
+        dueDate: healthDueDate || undefined,
+        doctorConsultationDate: doctorConsultationDate || undefined
       };
       updatedHistory = [...(activeHealthAnimal.healthHistory || []), newRecord];
     }
@@ -1961,6 +2772,7 @@ export default function ShaieAlamDashboard() {
     setHealthCost("");
     setHealthNotes("");
     setHealthDueDate("");
+    setDoctorConsultationDate("");
     setEditingHealthRecord(null);
     setHealthSubView("list");
 
@@ -1996,6 +2808,8 @@ export default function ShaieAlamDashboard() {
           feedType: editingAnimal.feedType,
           healthCondition: editingAnimal.healthCondition,
           notes: editingAnimal.notes,
+          feedingSchedule: editingAnimal.feedingSchedule || "",
+          dateAdded: editingAnimal.dateAdded || a.dateAdded,
           birthDate: computedBirthDate,
           ageMonths: computedAgeMonths,
           dueDate: calculatedDue > 0 ? (editingAnimal.dueDate || a.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]) : undefined,
@@ -3356,16 +4170,16 @@ _Empowered by ShaieAlam ERP Systems_`;
       </header>
 
       {/* Main Container Layout */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8 flex flex-col gap-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-6 py-4 md:py-6 flex flex-col gap-4 md:gap-6">
         
         {/* Navigation Tabs Bar */}
-        <div className="border border-slate-800 bg-slate-950/40 p-1.5 rounded-2xl flex flex-wrap gap-1">
+        <div className="border border-slate-800 bg-slate-950/40 p-1 rounded-xl flex overflow-x-auto whitespace-nowrap scrollbar-none gap-1">
           {[
             { id: "dashboard", label: activeTrans.dashboard, icon: Activity },
             { id: "livestock", label: activeTrans.livestock, icon: Layers },
+            { id: "cattle-feed", label: activeTrans.cattleFeed, icon: Wheat },
             { id: "retail", label: activeTrans.retail, icon: ShoppingCart },
-            { id: "investors", label: activeTrans.investments, icon: Users },
-            { id: "ai-assistant", label: activeTrans.aiAssistant, icon: Sparkles }
+            { id: "butchers", label: activeTrans.butchers, icon: ChefHat }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -3379,13 +4193,13 @@ _Empowered by ShaieAlam ERP Systems_`;
                     fetchSmartAlertsFromServer();
                   }
                 }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition duration-200 cursor-pointer ${
+                className={`flex items-center gap-1.5 md:gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg md:rounded-xl text-xs md:text-sm font-semibold md:font-medium transition duration-200 cursor-pointer ${
                   isActive 
                   ? "bg-teal-500 text-slate-950 shadow-md shadow-teal-500/10 font-bold" 
                   : "text-slate-300 hover:text-white hover:bg-slate-800"
                 }`}
               >
-                <Icon className={`h-4.5 w-4.5 ${isActive ? "text-slate-950" : "text-slate-400"}`} />
+                <Icon className={`h-3.5 w-3.5 md:h-4.5 md:w-4.5 ${isActive ? "text-slate-950" : "text-slate-400"}`} />
                 {tab.label}
               </button>
             );
@@ -3418,7 +4232,7 @@ _Empowered by ShaieAlam ERP Systems_`;
                 )}
               </div>
               <div>
-                <p className="text-sm font-bold text-white flex items-center gap-1.5 flex-wrap">
+                <p className="text-sm font-bold text-white flex items-center gap-1.5 flex-wrap flex-row font-sans">
                   {syncStatus === "Offline - Syncing" ? (
                     "Syncing Cached Transactions..."
                   ) : cachedQueue.length > 0 ? (
@@ -3432,7 +4246,7 @@ _Empowered by ShaieAlam ERP Systems_`;
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-slate-400 mt-1 leading-normal">
+                <p className="text-xs text-slate-400 mt-1 leading-normal font-sans">
                   {syncStatus === "Offline - Syncing" ? (
                     "Establishing handshake protocol and pushing ledger revisions to cloud nodes safely..."
                   ) : cachedQueue.length > 0 ? (
@@ -3458,10 +4272,10 @@ _Empowered by ShaieAlam ERP Systems_`;
 
         {/* TAB 1: OVERVIEW DASHBOARD */}
         {activeTab === "dashboard" && (
-          <div className="space-y-8 animate-fadeIn">
+          <div className="space-y-4 md:space-y-6 animate-fadeIn">
             
             {/* Top Stat Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {[
                 { title: activeTrans.todaysSales, value: `₹${totalSalesVal.toLocaleString()}`, change: "+14.2% today", icon: TrendingUp, color: "border-l-4 border-emerald-500" },
                 { title: activeTrans.pendingDues, value: `₹${totalPendingDues.toLocaleString()}`, change: "Owed to suppliers", icon: DollarSign, color: "border-l-4 border-amber-500" },
@@ -3470,54 +4284,47 @@ _Empowered by ShaieAlam ERP Systems_`;
               ].map((card, i) => {
                 const Icon = card.icon;
                 return (
-                  <div key={i} className={`bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-xl ${card.color}`}>
+                  <div key={i} className={`bg-slate-950 p-3.5 md:p-5 rounded-xl md:rounded-2xl border border-slate-800 shadow-lg ${card.color}`}>
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-slate-400 uppercase tracking-wider font-mono font-bold">{card.title}</p>
-                      <Icon className="h-5 w-5 text-slate-500" />
+                      <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-tight md:tracking-wider font-mono font-bold">{card.title}</p>
+                      <Icon className="h-4 w-4 md:h-5 md:w-5 text-slate-500 shrink-0" />
                     </div>
-                    <div className="mt-4 flex items-baseline justify-between">
-                      <h2 className="text-3xl font-black font-mono text-white">{card.value}</h2>
-                      <span className="text-[10px] text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-md font-mono">{card.change}</span>
+                    <div className="mt-2 md:mt-4 flex flex-col md:flex-row md:items-baseline justify-between gap-1">
+                      <h2 className="text-xl md:text-2xl lg:text-3xl font-black font-mono text-white leading-none">{card.value}</h2>
+                      <span className="text-[8px] md:text-[10px] text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded font-mono self-start md:self-auto">{card.change}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
-
+ 
             {/* Quick Command Control Panel */}
-            <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl flex flex-col md:flex-row gap-6 items-center justify-between">
+            <div className="bg-slate-950 border border-slate-800 p-4 md:p-5 rounded-2xl md:rounded-3xl flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-teal-400 animate-ping" />
+                <h3 className="text-sm md:text-base font-bold text-white flex items-center gap-2 font-sans">
+                  <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-ping" />
                   Quick POS Actions
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-[11px] text-slate-450 text-slate-400 mt-0.5 font-sans">
                   Speed up market operations for purchase logging and counter sales.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2 w-full md:w-auto">
                 <button
                   id="action-btn-add-animal"
                   onClick={() => checkPermissionAndRun("add-animal", () => setShowAddAnimalModal(true))}
-                  className="bg-teal-500 text-slate-950 font-bold px-4 py-2.5 rounded-xl hover:bg-teal-400 text-xs flex items-center gap-2 transition cursor-pointer"
+                  className="bg-teal-500 text-slate-950 font-black px-3.5 py-2 rounded-lg hover:bg-teal-400 text-xs flex items-center gap-1.5 transition cursor-pointer flex-1 md:flex-none justify-center"
                 >
-                  <PlusCircle className="h-4 w-4" />
+                  <PlusCircle className="h-3.5 w-3.5" />
                   {activeTrans.addAnimalBtn}
                 </button>
                 <button
                   id="action-btn-billing"
                   onClick={() => checkPermissionAndRun("retail-checkout", () => setShowBillingModal(true))}
-                  className="bg-white text-slate-950 font-bold px-4 py-2.5 rounded-xl hover:bg-slate-100 text-xs flex items-center gap-2 transition cursor-pointer"
+                  className="bg-white text-slate-950 font-black px-3.5 py-2 rounded-lg hover:bg-slate-100 text-xs flex items-center gap-1.5 transition cursor-pointer flex-1 md:flex-none justify-center"
                 >
-                  <ShoppingCart className="h-4 w-4" />
+                  <ShoppingCart className="h-3.5 w-3.5" />
                   {activeTrans.checkout}
-                </button>
-                <button
-                  onClick={() => setActiveTab("ai-assistant")}
-                  className="bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl hover:bg-slate-700 text-xs flex items-center gap-2 transition cursor-pointer border border-slate-700"
-                >
-                  <Sparkles className="h-4 w-4 text-teal-400" />
-                  Run Yield Estimator
                 </button>
               </div>
             </div>
@@ -3786,6 +4593,16 @@ _Empowered by ShaieAlam ERP Systems_`;
                     <option value="SortChronological">⏳ Sort Chronologically / ক্রমানুসারে সাজান</option>
                   </select>
                 </div>
+
+                {/* Export CSV Button */}
+                <button
+                  type="button"
+                  onClick={handleExportLivestockCSV}
+                  className="bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-850 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer self-stretch md:self-auto min-w-[110px]"
+                >
+                  <Download className="h-4 w-4 text-teal-400" />
+                  <span>Export CSV</span>
+                </button>
               </div>
 
               {/* Batch Slicing Action panel */}
@@ -3955,7 +4772,24 @@ _Empowered by ShaieAlam ERP Systems_`;
                             </td>
                             <td className="p-4 font-mono text-sm text-white">{animal.weightKg} kg</td>
                             <td className="p-4 text-sm font-semibold">{animal.owner}</td>
-                            <td className="p-4 font-mono text-sm text-white">₹{animal.purchasePrice.toLocaleString()}</td>
+                            <td className="p-4 font-mono text-xs">
+                              <span className="text-white font-bold block text-sm">₹{animal.purchasePrice.toLocaleString()}</span>
+                              {(() => {
+                                const fCost = animal.feedCost || 0;
+                                const mCost = (animal.medicineCost || 0) + (animal.healthHistory || []).reduce((sum, h) => sum + (h.cost || 0), 0);
+                                const mtCost = animal.maintenanceCost || 0;
+                                const hCost = animal.handlingCost || 0;
+                                const welfareTotal = fCost + mCost + mtCost + hCost;
+                                if (welfareTotal > 0) {
+                                  return (
+                                    <span className="text-[10px] text-emerald-400 block mt-1 hover:text-emerald-300 transition cursor-help font-sans" title={`Feed: ₹${fCost}, Med: ₹${mCost}, Maint: ₹${mtCost}, Handling: ₹${hCost}`}>
+                                      Welfare: +₹{welfareTotal.toLocaleString()}
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </td>
                             <td className="p-4">
                               <div className="font-mono text-sm text-amber-400">
                                 {animal.due > 0 ? `₹${animal.due.toLocaleString()}` : "—"}
@@ -4060,17 +4894,48 @@ _Empowered by ShaieAlam ERP Systems_`;
                                 )}
 
                                 {animal.status !== "Processed" ? (
-                                  <button
-                                    onClick={() => checkPermissionAndRun("process-animal", () => {
-                                      setProcessTarget(animal);
-                                      setShowProcessModal(true);
-                                    })}
-                                    className="px-2.5 py-1 text-[10px] bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-md transition"
-                                  >
-                                    {activeTrans.processAnimalBtn}
-                                  </button>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => checkPermissionAndRun("process-animal", () => {
+                                        const fCost = animal.feedCost || 0;
+                                        const mCost = (animal.medicineCost || 0) + (animal.healthHistory || []).reduce((sum, h) => sum + (h.cost || 0), 0);
+                                        const mtCost = animal.maintenanceCost || 0;
+                                        const hCost = animal.handlingCost || 0;
+                                        const totalBase = animal.purchasePrice + fCost + mCost + mtCost + hCost;
+                                        
+                                        setNegotiationActiveAnimal(animal);
+                                        setNegotiatedInternalPrice(String(totalBase + 5500));
+                                      })}
+                                      className="px-2.5 py-1 text-[10px] bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-md transition duration-150"
+                                      title="Negotiate internal transfer price and transfer this cattle to the slaughter house department"
+                                    >
+                                      Slaughter Transfer
+                                    </button>
+                                    <button
+                                      onClick={() => checkPermissionAndRun("process-animal", () => {
+                                        setProcessTarget(animal);
+                                        setShowProcessModal(true);
+                                      })}
+                                      className="px-2.5 py-1 text-[10px] bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-md transition"
+                                      title="Slice animal directly into cold meat inventory stock"
+                                    >
+                                      {activeTrans.processAnimalBtn}
+                                    </button>
+                                  </div>
                                 ) : (
-                                  <span className="text-xs text-slate-500 font-mono italic">Sliced & Logged</span>
+                                  <div className="text-right leading-snug shrink-0">
+                                    {animal.slaughterNegotiatedPrice ? (
+                                      <div>
+                                        <span className="text-[10px] font-bold text-slate-400 font-mono block">Negotiated: ₹{animal.slaughterNegotiatedPrice.toLocaleString()}</span>
+                                        <span className={`text-[10.5px] font-black font-mono block ${animal.slaughterProfitOrLoss && animal.slaughterProfitOrLoss >= 0 ? "text-emerald-400" : "text-rose-450 text-rose-400"}`}>
+                                          Farm P&L: {animal.slaughterProfitOrLoss && animal.slaughterProfitOrLoss >= 0 ? "+" : ""}₹{animal.slaughterProfitOrLoss ? animal.slaughterProfitOrLoss.toLocaleString() : "0"}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-slate-500 font-mono italic block">Direct Sliced & Sourced</span>
+                                    )}
+                                  </div>
                                 )}
 
                               </div>
@@ -4573,20 +5438,27 @@ _Empowered by ShaieAlam ERP Systems_`;
                       <div className="w-full sm:max-w-xs">
                         <span className="text-xs text-slate-400 block mb-1">{activeTrans.paymentMethod}</span>
                         <div className="flex flex-wrap gap-2">
-                          {["Cash", "bKash", "Card", "Due"].map(p => (
-                            <button
-                              key={p}
-                              type="button"
-                              onClick={() => setNewSale({ ...newSale, paymentMethod: p as any })}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition ${
-                                newSale.paymentMethod === p 
-                                ? "bg-teal-500 text-slate-950 font-black" 
-                                : "bg-slate-900 text-slate-400 hover:text-white"
-                              }`}
-                            >
-                              {p}
-                            </button>
-                          ))}
+                          {["Cash", "bKash", "Card", "Due"].map(p => {
+                            const icon = p === "Cash" ? <Wallet className="h-3.5 w-3.5 shrink-0" /> :
+                                         p === "bKash" ? <Smartphone className="h-3.5 w-3.5 shrink-0" /> :
+                                         p === "Card" ? <CreditCard className="h-3.5 w-3.5 shrink-0" /> :
+                                         <Clock className="h-3.5 w-3.5 shrink-0" />;
+                            return (
+                              <button
+                                key={p}
+                                type="button"
+                                onClick={() => setNewSale({ ...newSale, paymentMethod: p as any })}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition flex items-center gap-1.5 ${
+                                  newSale.paymentMethod === p 
+                                  ? "bg-teal-500 text-slate-950 font-black font-extrabold" 
+                                  : "bg-slate-900 text-slate-400 hover:text-white"
+                                }`}
+                              >
+                                {icon}
+                                <span>{p}</span>
+                              </button>
+                            );
+                          })}
                         </div>
 
                         {/* Partial Payment Configuration */}
@@ -4903,9 +5775,19 @@ _Empowered by ShaieAlam ERP Systems_`;
                   {/* Filters & Direct Actions Deck */}
                   <div className="p-5 bg-slate-950 border border-slate-800 rounded-2xl space-y-4">
                     <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Coins className="h-5 w-5 text-teal-400" />
-                        <h4 className="text-sm font-bold text-white uppercase tracking-wider font-mono">Collections Ledger Filters</h4>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Coins className="h-5 w-5 text-teal-400" />
+                          <h4 className="text-sm font-bold text-white uppercase tracking-wider font-mono">Collections Ledger Filters</h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleExportSalesCSV}
+                          className="bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-850 px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition select-none cursor-pointer"
+                        >
+                          <Download className="h-3 w-3 text-teal-400" />
+                          <span>Export CSV</span>
+                        </button>
                       </div>
                       
                       {/* Search matches inputs */}
@@ -5376,53 +6258,114 @@ _Empowered by ShaieAlam ERP Systems_`;
                         {/* Customer list container */}
                         <div className="space-y-3.5 max-h-[500px] overflow-y-auto pr-1">
                           {(() => {
-                            const customerStats = (() => {
+                            const aggregatedDirectory = (() => {
                               const map: Record<string, {
                                 code: string;
                                 name: string;
                                 phone: string;
-                                totalPurchased: number;
-                                totalPaid: number;
+                                totalSpent: number;
                                 totalDue: number;
-                                transactions: Sale[];
                                 lastVisit: string;
+                                transactionsCount: number;
                               }> = {};
 
+                              // 1. Retail Sales
                               sales.forEach(sale => {
                                 const code = sale.customerCode || "N/A";
                                 const phone = sale.customerPhone || "N/A";
                                 const name = sale.customerName || "Walk-In Buyer";
-                                const paid = sale.amountPaid !== undefined ? sale.amountPaid : sale.totalAmount;
                                 const due = sale.amountDue !== undefined ? sale.amountDue : 0;
-
-                                const key = code !== "N/A" ? code : `${name}_${phone}`;
+                                const key = code !== "N/A" ? code.toLowerCase() : `${name.toLowerCase()}_${phone}`;
 
                                 if (!map[key]) {
                                   map[key] = {
                                     code,
                                     name,
                                     phone,
-                                    totalPurchased: 0,
-                                    totalPaid: 0,
+                                    totalSpent: 0,
                                     totalDue: 0,
-                                    transactions: [],
                                     lastVisit: sale.date,
+                                    transactionsCount: 0,
                                   };
                                 }
 
-                                map[key].totalPurchased += sale.totalAmount;
-                                map[key].totalPaid += paid;
+                                map[key].totalSpent += sale.totalAmount;
                                 map[key].totalDue += due;
-                                map[key].transactions.push(sale);
+                                map[key].transactionsCount += 1;
                                 if (sale.date > map[key].lastVisit) {
                                   map[key].lastVisit = sale.date;
+                                }
+                              });
+
+                              // 2. Portion sales under dispatcher
+                              butcherDispatches.forEach(disp => {
+                                if (disp.portionSales) {
+                                  disp.portionSales.forEach(sale => {
+                                    const code = sale.customerCode || "N/A";
+                                    const phone = sale.customerPhone || "N/A";
+                                    const name = sale.customerName || "Portion Buyer";
+                                    const key = code !== "N/A" ? code.toLowerCase() : `${name.toLowerCase()}_${phone}`;
+
+                                    if (!map[key]) {
+                                      map[key] = {
+                                        code,
+                                        name,
+                                        phone,
+                                        totalSpent: 0,
+                                        totalDue: 0,
+                                        lastVisit: sale.date || disp.slaughterDate || disp.dispatchDate || "",
+                                        transactionsCount: 0,
+                                      };
+                                    }
+
+                                    map[key].totalSpent += sale.totalAmount;
+                                    map[key].totalDue += sale.amountDue;
+                                    map[key].transactionsCount += 1;
+                                    const dateStr = sale.date || disp.slaughterDate || disp.dispatchDate || "";
+                                    if (dateStr > map[key].lastVisit) {
+                                      map[key].lastVisit = dateStr;
+                                    }
+                                  });
+                                }
+                              });
+
+                              // 3. Procurement Credits (seller/supplier matching by name)
+                              animals.forEach(ani => {
+                                const name = ani.owner || "";
+                                if (!name || name.toLowerCase().includes("bazar") || name.toLowerCase() === "unknown") return;
+
+                                const phone = "N/A";
+                                const key = name.toLowerCase();
+                                let foundKey = key;
+
+                                const existing = Object.entries(map).find(([k, v]) => v.name.toLowerCase() === key);
+                                if (existing) {
+                                  foundKey = existing[0];
+                                }
+
+                                if (!map[foundKey]) {
+                                  map[foundKey] = {
+                                    code: "N/A",
+                                    name,
+                                    phone,
+                                    totalSpent: 0,
+                                    totalDue: 0, // due to us (this represents supplier credit, which is negative since we owe them, we can display this cleanly)
+                                    lastVisit: ani.dateAdded,
+                                    transactionsCount: 0,
+                                  };
+                                }
+
+                                // We treat procurement events as supplier relationships
+                                map[foundKey].transactionsCount += 1;
+                                if (ani.dateAdded > map[foundKey].lastVisit) {
+                                  map[foundKey].lastVisit = ani.dateAdded;
                                 }
                               });
 
                               return Object.values(map).sort((a,b) => b.lastVisit.localeCompare(a.lastVisit));
                             })();
 
-                            const filtered = customerStats.filter(c => {
+                            const filtered = aggregatedDirectory.filter(c => {
                               const q = customerSearchQuery.toLowerCase().trim();
                               if (!q) return true;
                               return (
@@ -5436,17 +6379,21 @@ _Empowered by ShaieAlam ERP Systems_`;
                               return (
                                 <div className="text-center py-10 bg-slate-900/20 border border-dashed border-slate-800 rounded-2xl">
                                   <Users className="h-8 w-8 text-slate-500 mx-auto opacity-40 mb-2" />
-                                  <p className="text-xs text-slate-500 font-medium">No customers found</p>
+                                  <p className="text-xs text-slate-500 font-medium">No customers or suppliers found</p>
                                 </div>
                               );
                             }
 
                             return filtered.map(c => {
-                              const isSelected = selectedTrackerCode === c.code;
+                              const selectionId = c.code !== "N/A" ? c.code : c.name;
+                              const isSelected = selectedTrackerCode === selectionId;
+                              const supplierRecords = animals.filter(ani => ani.owner && ani.owner.toLowerCase() === c.name.toLowerCase());
+                              const supplierCreditCount = supplierRecords.filter(a => a.due > 0).length;
+
                               return (
                                 <div
                                   key={c.code !== "N/A" ? c.code : `${c.name}_${c.phone}`}
-                                  onClick={() => setSelectedTrackerCode(c.code)}
+                                  onClick={() => setSelectedTrackerCode(selectionId)}
                                   className={`p-4 border rounded-2xl cursor-pointer transition flex items-center justify-between text-left ${
                                     isSelected 
                                       ? "bg-teal-500/10 border-teal-500" 
@@ -5456,7 +6403,7 @@ _Empowered by ShaieAlam ERP Systems_`;
                                   <div className="space-y-1">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className="text-[10px] font-mono bg-slate-900 border border-slate-800/80 px-2 py-0.5 rounded text-teal-400 font-bold">
-                                        {c.code !== "N/A" ? `CODE ${c.code}` : "NO CODE"}
+                                        {c.code !== "N/A" ? `CODE ${c.code}` : "PARTNER"}
                                       </span>
                                       <span className="text-[9px] text-slate-500 font-mono italic">
                                         {c.lastVisit}
@@ -5465,24 +6412,25 @@ _Empowered by ShaieAlam ERP Systems_`;
                                     <h5 className="text-xs font-bold text-white pt-1">{c.name}</h5>
                                     <p className="text-[10px] text-slate-400 font-mono">{c.phone}</p>
                                     
-                                    <div className="pt-1.5 flex items-center gap-1.5 font-mono text-[9px]">
-                                      <span className="bg-slate-900 px-1.5 py-0.5 rounded text-white border border-slate-800">
-                                        📑 {c.transactions.length} Visits
+                                    <div className="pt-1.5 flex flex-wrap items-center gap-1.5 font-mono text-[9px]">
+                                      <span className="bg-slate-900 px-1.5 py-0.5 rounded text-slate-300 border border-slate-800">
+                                        📑 {c.transactionsCount} entries
                                       </span>
-                                      {c.totalDue > 0 ? (
+                                      {c.totalDue > 0 && (
                                         <span className="bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded font-bold font-mono">
                                           Due: ₹{c.totalDue.toLocaleString()}
                                         </span>
-                                      ) : (
-                                        <span className="bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded font-bold font-mono">
-                                          Paid
+                                      )}
+                                      {supplierCreditCount > 0 && (
+                                        <span className="bg-rose-500/15 text-rose-400 px-1.5 py-0.5 rounded font-bold font-mono border border-rose-500/10">
+                                          Credit Sourcing: {supplierCreditCount}
                                         </span>
                                       )}
                                     </div>
                                   </div>
                                   <div className="text-right flex flex-col items-end">
-                                    <p className="text-xs font-mono font-bold text-teal-400">₹{c.totalPurchased.toLocaleString()}</p>
-                                    <span className="text-[8px] text-slate-500 font-mono uppercase mt-1">spent</span>
+                                    <p className="text-xs font-mono font-bold text-teal-400">₹{c.totalSpent.toLocaleString()}</p>
+                                    <span className="text-[8px] text-slate-500 font-mono uppercase mt-1">Total Spent</span>
                                   </div>
                                 </div>
                               );
@@ -5673,6 +6621,486 @@ _Empowered by ShaieAlam ERP Systems_`;
           ) : renderAccessRestricted("Retail POS Sales billing counter", ["Administrator", "Retail Cashier"])
         )}
 
+        {/* TAB 3B: CATTLE FEED & WELFARE DEPARTMENT */}
+        {activeTab === "cattle-feed" && (
+          isTabAllowed("cattle-feed", currentUser?.role) ? (
+            <div className="space-y-6 animate-fadeIn">
+              
+              {/* Department Header */}
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-950 p-6 rounded-3xl border border-slate-800">
+                <div>
+                  <h3 className="text-xl font-black text-white flex items-center gap-2">
+                    <Wheat className="h-6 w-6 text-amber-500" />
+                    Cattle Feed & Welfare Department
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Multi-functional department running in-house farm nutrition & healthcare transfers, alongside a public feed & medicine store-front terminal.
+                  </p>
+                </div>
+
+                {/* Sub-Tabs Selector Navigation */}
+                <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800 self-stretch md:self-auto gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setFeedSubTab("inventory")}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl transition duration-155 select-none cursor-pointer flex items-center gap-1.5 ${
+                      feedSubTab === "inventory" ? "bg-teal-500 text-slate-950 font-black shadow-md" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Wheat className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Farm Sacks & Alloc</span>
+                    <span className="sm:hidden">Stock</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFeedSubTab("sales")}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl transition duration-155 select-none cursor-pointer flex items-center gap-1.5 ${
+                      feedSubTab === "sales" ? "bg-teal-500 text-slate-950 font-black shadow-md" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <ShoppingCart className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Store POS Terminal</span>
+                    <span className="sm:hidden">POS</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFeedSubTab("customers")}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl transition duration-155 select-none cursor-pointer flex items-center gap-1.5 ${
+                      feedSubTab === "customers" ? "bg-teal-500 text-slate-950 font-black shadow-md" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <UserCheck className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Customers Ledger</span>
+                    <span className="sm:hidden">Customers</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFeedSubTab("transactions")}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl transition duration-155 select-none cursor-pointer flex items-center gap-1.5 ${
+                      feedSubTab === "transactions" ? "bg-teal-500 text-slate-950 font-black shadow-md" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <History className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Voucher Registers</span>
+                    <span className="sm:hidden">Vouchers</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Feed & Welfare Stats Summary Row */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 font-mono">Feed stock variety</span>
+                  <p className="text-2xl font-black text-white mt-1">{feedStock.length} items</p>
+                  <span className="text-[9px] text-teal-400 font-mono mt-1">In-house stock categories</span>
+                </div>
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 font-mono">Total Feed Sacks</span>
+                  <p className="text-2xl font-black text-amber-500 mt-1">
+                    {feedStock.reduce((sum, f) => sum + f.sackCount, 0).toFixed(1)} sacks
+                  </p>
+                  <span className="text-[9px] text-slate-400 font-mono mt-1">Available for distribution</span>
+                </div>
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 font-mono">Feed Allocations logged</span>
+                  <p className="text-2xl font-black text-white mt-1">{feedAllocations.length} records</p>
+                  <span className="text-[9px] text-emerald-400 font-mono mt-1">Directly assigned to heads</span>
+                </div>
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 font-mono">Cumulative Welfare Spends</span>
+                  <p className="text-2xl font-black text-emerald-400 mt-1">
+                    ₹{animals.reduce((sum, a) => {
+                      const fCost = a.feedCost || 0;
+                      const mCost = (a.medicineCost || 0) + (a.healthHistory || []).reduce((s, h) => s + (h.cost || 0), 0);
+                      const maintCost = a.maintenanceCost || 0;
+                      const hndlCost = a.handlingCost || 0;
+                      return sum + fCost + mCost + maintCost + hndlCost;
+                    }, 0).toLocaleString()}
+                  </p>
+                  <span className="text-[9px] text-slate-400 font-mono mt-1">Welfare capital recorded</span>
+                </div>
+              </div>
+
+              {/* Main Content Split Panels */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                {/* 1. Left Action Column: Allocation & Purchase forms */}
+                <div className="space-y-6 lg:col-span-1">
+                  
+                  {/* Form A: Allocate Daily Feed to Cattle */}
+                  <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800 space-y-4">
+                    <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-850 pb-2">
+                      <Scale className="h-4 w-4 text-teal-400" />
+                      Allocate Feed to Cattle Head
+                    </h4>
+
+                    <form onSubmit={handleAllocateFeedSubmit} className="space-y-3 text-xs">
+                      <div>
+                        <label className="block text-slate-400 mb-1 font-mono text-[10px] uppercase">Select Active Cattle *</label>
+                        <select
+                          required
+                          value={allocateAnimalId}
+                          onChange={(e) => setAllocateAnimalId(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-teal-400 cursor-pointer font-mono"
+                        >
+                          <option value="">-- Choose active animal --</option>
+                          {animals.filter(a => a.status !== "Processed").map(a => (
+                            <option key={a.id} value={a.id}>
+                              {a.id} ({a.type} - {a.breed}, {a.weightKg}kg)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-400 mb-1 font-mono text-[10px] uppercase">Select Raw Feed *</label>
+                        <select
+                          required
+                          value={allocateFeedId}
+                          onChange={(e) => setAllocateFeedId(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-teal-400 cursor-pointer font-mono"
+                        >
+                          <option value="">-- Choose from stock --</option>
+                          {feedStock.filter(f => f.sackCount > 0).map(f => (
+                            <option key={f.id} value={f.id}>
+                              {f.type} (Stock: {f.sackCount} Sacks, {f.sackWeightKg}kg/sack)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-400 mb-1 font-mono text-[10px] uppercase font-bold">Qty (in Kilograms) *</label>
+                        <input
+                          type="number"
+                          required
+                          min="0.1"
+                          step="0.1"
+                          placeholder="e.g. 5.5"
+                          value={allocateQtyKg}
+                          onChange={(e) => setAllocateQtyKg(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono font-bold text-teal-400 focus:outline-none focus:border-teal-400"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black tracking-wider rounded-xl uppercase transition cursor-pointer text-[10px]"
+                      >
+                        Register Feed Allocation
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Form B: Log Extra Welfare Parameters */}
+                  <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800 space-y-4">
+                    <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-850 pb-2">
+                      <Heart className="h-4 w-4 text-emerald-400" />
+                      Record Medical & Welfare Charges
+                    </h4>
+
+                    <form onSubmit={handleLogExtraWelfareSubmit} className="space-y-3 text-xs">
+                      <div>
+                        <label className="block text-slate-400 mb-1 font-mono text-[10px] uppercase">Select Cattle Head *</label>
+                        <select
+                          required
+                          value={welfareAnimalId}
+                          onChange={(e) => setWelfareAnimalId(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-400 cursor-pointer font-mono"
+                        >
+                          <option value="">-- Choose active animal --</option>
+                          {animals.filter(a => a.status !== "Processed").map(a => (
+                            <option key={a.id} value={a.id}>
+                              {a.id} ({a.type} - {a.breed})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-400 mb-1 font-mono text-[10px] uppercase">Action Roster *</label>
+                        <select
+                          required
+                          value={welfareLogType}
+                          onChange={(e) => setWelfareLogType(e.target.value as any)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-400 cursor-pointer"
+                        >
+                          <option value="Medicine">Medicine & Veterinary Checks</option>
+                          <option value="Maintenance">Stall/Spacial Maintenance</option>
+                          <option value="Handling">Handling & Grooming Overheads</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-400 mb-1 font-mono text-[10px] uppercase">Cost Amount (₹) *</label>
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          placeholder="e.g. 1200"
+                          value={welfareCostAmt}
+                          onChange={(e) => setWelfareCostAmt(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono font-bold text-emerald-400 focus:outline-none focus:border-emerald-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-400 mb-1 font-mono text-[10px] uppercase">Treatment Details / Specifications</label>
+                        <textarea
+                          placeholder="e.g. Deworming booster vaccine, Grooming session, etc."
+                          value={welfareDescription}
+                          onChange={(e) => setWelfareDescription(e.target.value)}
+                          rows={2}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-400"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black tracking-wider rounded-xl uppercase transition cursor-pointer text-[10px]"
+                      >
+                        Log Welfare Cost
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Form C: Procure/Purchase Feed Stock */}
+                  <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800 space-y-4">
+                    <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-850 pb-2">
+                      <PlusCircle className="h-4 w-4 text-amber-500" />
+                      Procure New Feed Sacks
+                    </h4>
+
+                    <form onSubmit={handleRecordFeedPurchase} className="space-y-3 text-xs">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-slate-400 mb-1 font-mono text-[9px] uppercase">Feed Variety Name *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Soymeal"
+                            value={newFeedType}
+                            onChange={(e) => setNewFeedType(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white focus:outline-none focus:border-amber-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-400 mb-1 font-mono text-[9px] uppercase">Sack Count *</label>
+                          <input
+                            type="number"
+                            required
+                            min="1"
+                            value={newFeedSackCount}
+                            onChange={(e) => setNewFeedSackCount(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white font-mono focus:outline-none focus:border-amber-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-slate-400 mb-1 font-mono text-[9px] uppercase">Sack Weight (Kg)</label>
+                          <input
+                            type="number"
+                            required
+                            min="1"
+                            value={newFeedSackWeight}
+                            onChange={(e) => setNewFeedSackWeight(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white font-mono focus:outline-none focus:border-amber-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-400 mb-1 font-mono text-[9px] uppercase">Cost Per Sack (₹) *</label>
+                          <input
+                            type="number"
+                            required
+                            min="1"
+                            placeholder="e.g. 1500"
+                            value={newFeedUnitCost}
+                            onChange={(e) => setNewFeedUnitCost(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white font-mono focus:outline-none focus:border-amber-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-400 mb-1 font-mono text-[10px] uppercase">Supplier/Mill Agent Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Rajshahi Feed Importers"
+                          value={newFeedSupplier}
+                          onChange={(e) => setNewFeedSupplier(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-white focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black tracking-wider rounded-xl uppercase transition cursor-pointer text-[10px]"
+                      >
+                        Procure Stock Sacks
+                      </button>
+                    </form>
+                  </div>
+
+                </div>
+
+                {/* 2. Middle & Right: Listings and details */}
+                <div className="space-y-6 lg:col-span-2">
+                  
+                  {/* Ledger A: Current Feed Stock */}
+                  <div className="bg-slate-950 hover:border-slate-800 transition p-6 rounded-3xl border border-slate-850 space-y-4">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block border-b border-slate-850 pb-2 font-mono">
+                      🌾 Real-Time Feed Sacks Inventory
+                    </span>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs font-sans whitespace-nowrap">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-500 uppercase text-[9px] tracking-wider font-mono">
+                            <th className="py-2.5">Feed SKU</th>
+                            <th className="py-2.5">Feed Type Variety</th>
+                            <th className="py-2.5 text-center">Remaining Stock</th>
+                            <th className="py-2.5 text-center">Sack Specs</th>
+                            <th className="py-2.5 text-right font-bold">Purchase Price</th>
+                            <th className="py-2.5 text-right">Raw Supplier</th>
+                            <th className="py-2.5 text-center">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-900/60 text-slate-200">
+                          {feedStock.map((feed) => (
+                            <tr key={feed.id} className="hover:bg-slate-900/30">
+                              <td className="py-3 text-slate-400 font-mono text-[10px] font-bold">{feed.id}</td>
+                              <td className="py-3 font-bold text-white flex items-center gap-2">
+                                <Wheat className="h-3.5 w-3.5 text-amber-500" />
+                                {feed.type}
+                              </td>
+                              <td className="py-3 text-center">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                                  feed.sackCount <= 0 
+                                    ? "bg-red-500/10 text-red-400 border border-red-500/20" 
+                                    : feed.sackCount < 5 
+                                      ? "bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse" 
+                                      : "bg-teal-500/10 text-teal-400 border border-teal-500/20"
+                                }`}>
+                                  {feed.sackCount} sacks
+                                </span>
+                              </td>
+                              <td className="py-3 text-center font-mono text-slate-400 text-[11px]">{feed.sackWeightKg} kg / sack</td>
+                              <td className="py-3 text-right font-bold font-mono text-white">₹{feed.unitCostPerSack.toLocaleString()}</td>
+                              <td className="py-3 text-right text-slate-400 text-[11px]">{feed.supplier}</td>
+                              <td className="py-3 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setFeedStock(feedStock.filter(f => f.id !== feed.id))}
+                                  className="text-[10px] text-red-400 hover:text-white hover:bg-red-500 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded cursor-pointer font-bold transition"
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Ledger B: Recent Consumption logs */}
+                  <div className="bg-slate-950 p-6 rounded-3xl border border-slate-850 space-y-4">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block border-b border-slate-850 pb-2 font-mono">
+                      📋 Nutritional Consumption Logs (Welfare Allocated)
+                    </span>
+
+                    <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
+                      <table className="w-full text-left text-xs font-sans whitespace-nowrap">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-500 uppercase text-[9px] tracking-wider font-mono">
+                            <th className="py-2">Alloc ID</th>
+                            <th className="py-2">Cattle Target</th>
+                            <th className="py-2">Feed Variety</th>
+                            <th className="py-2 text-center">Qty Assigned</th>
+                            <th className="py-2 text-right">Cost Assigned</th>
+                            <th className="py-2 text-right">Timestamp</th>
+                            <th className="py-2 text-center">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-900/60 text-slate-200">
+                          {feedAllocations.map((alloc) => (
+                            <tr key={alloc.id} className="hover:bg-slate-900/30">
+                              <td className="py-2 text-slate-500 font-mono text-[10px]">{alloc.id}</td>
+                              <td className="py-2 text-slate-200 font-bold font-mono">{alloc.animalId}</td>
+                              <td className="py-2 font-sans font-semibold text-slate-300">{alloc.feedType}</td>
+                              <td className="py-2 text-center font-bold font-mono text-white">{alloc.quantityKg} kg</td>
+                              <td className="py-2 text-right text-teal-400 font-bold font-mono">₹{alloc.cost.toLocaleString()}</td>
+                              <td className="py-2 text-right text-slate-500 font-mono text-[11px]">{alloc.allocatedDate}</td>
+                              <td className="py-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setFeedAllocations(feedAllocations.filter(fa => fa.id !== alloc.id))}
+                                  className="text-[9px] text-red-400 hover:text-white hover:bg-red-500 px-1 py-0.5 rounded cursor-pointer font-bold"
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Ledger C: Cattle-wise Welfare Ledger Overview */}
+                  <div className="bg-slate-950 p-6 rounded-3xl border border-slate-850 space-y-4">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block border-b border-slate-850 pb-2 font-mono">
+                      🩺 Cumulative Welfare Spends per Live Animal
+                    </span>
+
+                    <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
+                      <table className="w-full text-left text-xs font-sans whitespace-nowrap font-mono">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-500 uppercase text-[9px] tracking-wider">
+                            <th className="py-2">Animal SKU</th>
+                            <th className="py-2">Purchase Cost</th>
+                            <th className="py-2 text-right">Feed cost</th>
+                            <th className="py-2 text-right">Medical cost</th>
+                            <th className="py-2 text-right">Maintenance cost</th>
+                            <th className="py-2 text-right">Handling cost</th>
+                            <th className="py-2 text-right text-white font-bold">Base Investment</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-900/60 text-slate-200">
+                          {animals.filter(a => a.status !== "Processed").map((a) => {
+                            const fCost = a.feedCost || 0;
+                            const mCost = (a.medicineCost || 0) + (a.healthHistory || []).reduce((sum, h) => sum + (h.cost || 0), 0);
+                            const mtCost = a.maintenanceCost || 0;
+                            const hCost = a.handlingCost || 0;
+                            const baseInvestment = a.purchasePrice + fCost + mCost + mtCost + hCost;
+
+                            return (
+                              <tr key={a.id} className="hover:bg-slate-900/30">
+                                <td className="py-2 font-bold text-white">{a.id}</td>
+                                <td className="py-2 text-slate-300">₹{a.purchasePrice.toLocaleString()}</td>
+                                <td className="py-2 text-right text-amber-500">₹{fCost.toLocaleString()}</td>
+                                <td className="py-2 text-right text-emerald-400">₹{mCost.toLocaleString()}</td>
+                                <td className="py-2 text-right text-cyan-400">₹{mtCost.toLocaleString()}</td>
+                                <td className="py-2 text-right text-fuchsia-400">₹{hCost.toLocaleString()}</td>
+                                <td className="py-2 text-right text-teal-400 font-black">₹{baseInvestment.toLocaleString()}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+              
+            </div>
+          ) : renderAccessRestricted("Nutritional Sacks Allocation and Welfare Counter", ["Administrator", "Livestock Manager"])
+        )}
+
         {/* TAB 4: SHAREHOLDERS & CAPITAL INVESTMENTS */}
         {activeTab === "investors" && (
           isTabAllowed("investors", currentUser?.role) ? (
@@ -5700,18 +7128,164 @@ _Empowered by ShaieAlam ERP Systems_`;
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-900 font-mono text-sm text-slate-300">
-                      {investors.map((inv, i) => (
-                        <tr key={i} className="hover:bg-slate-900/20">
-                          <td className="p-3 font-semibold text-white">{inv.name}</td>
-                          <td className="p-3 text-right font-bold text-teal-400">₹{inv.balance.toLocaleString()}</td>
-                          <td className="p-3 text-right font-bold text-emerald-400">₹{inv.profitEarned.toLocaleString()}</td>
-                          <td className="p-3 text-right">
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/10 uppercase font-black uppercase tracking-wider">
-                              Fully Active
-                            </span>
+                      {investors.map((inv, i) => {
+                        const totalCapital = investors.reduce((sum, v) => sum + v.balance, 0);
+                        const pct = totalCapital > 0 ? (inv.balance / totalCapital) * 100 : 0;
+                        return (
+                          <tr key={i} className="hover:bg-slate-900/20">
+                            <td className="p-3">
+                              <span className="font-semibold text-white block">{inv.name}</span>
+                              <span className="text-[10px] text-slate-500 font-mono">Weight: {Math.round(pct * 10) / 10}%</span>
+                            </td>
+                            <td className="p-3 text-right font-bold text-teal-400">₹{inv.balance.toLocaleString()}</td>
+                            <td className="p-3 text-right font-bold text-emerald-400">₹{inv.profitEarned.toLocaleString()}</td>
+                            <td className="p-3 text-right">
+                              <span className="px-2 py-0.5 rounded text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/10 uppercase font-black uppercase tracking-wider">
+                                Fully Active
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Profit Distribution & Dividend Payout Logs */}
+              <div className="lg:col-span-2 bg-slate-950 border border-slate-800 p-6 rounded-3xl space-y-4">
+                <div>
+                  <h3 className="text-sm font-black text-white flex items-center gap-2 uppercase tracking-wider font-mono">
+                    <History className="h-4.5 w-4.5 text-teal-400" />
+                    Profit Distribution & Dividend Payout Logs
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Audited ledger of automated dividend transactions disbursed down to trade shareholders.
+                  </p>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-slate-900 text-slate-500 font-mono text-[10px] uppercase bg-slate-900/30">
+                        <th className="p-3">Ref ID</th>
+                        <th className="p-3">Payout Date</th>
+                        <th className="p-3">Distribution Type</th>
+                        <th className="p-3 text-right">Dividend Sum</th>
+                        <th className="p-3 text-left">Shareholders Split</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900 font-mono text-xs text-slate-300">
+                      {payoutLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-8 text-center text-slate-500 font-sans text-xs">
+                            No dividend payouts initiated yet.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        payoutLogs.map((log: any, index: number) => (
+                          <tr key={index} className="hover:bg-slate-900/10">
+                            <td className="p-3 font-bold text-teal-400">{log.id}</td>
+                            <td className="p-3">{log.date}</td>
+                            <td className="p-3">
+                              <span className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold border ${
+                                log.type === "Capital Reinvestment" 
+                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+                                  : "bg-sky-500/10 text-sky-400 border-sky-500/20"
+                              }`}>
+                                {log.type}
+                              </span>
+                            </td>
+                            <td className="p-3 text-right font-bold text-white">₹{log.totalProfit.toLocaleString()}</td>
+                            <td className="p-3 text-left font-sans">
+                              <div className="flex flex-wrap gap-1.5">
+                                {log.split.map((s: any, si: number) => (
+                                  <span key={si} className="text-[9px] bg-slate-900 border border-slate-800 text-slate-400 px-2 py-0.5 rounded-inner font-mono">
+                                    {s.name}: <span className="font-bold text-emerald-400">₹{s.amount.toLocaleString()}</span> ({s.percentage}%)
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Livestock Profit Allocation Directory */}
+              <div className="lg:col-span-2 bg-slate-950 border border-slate-800 p-6 rounded-3xl space-y-6">
+                <div>
+                  <h3 className="text-sm font-black text-white flex items-center gap-2 uppercase tracking-wider font-mono">
+                    <TrendingUp className="h-4.5 w-4.5 text-emerald-400" />
+                    Livestock Sales Profit Allocation Directory
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Calculate and display total profit earned by each investor, based on their contribution percentage and the total profit generated from livestock sales.
+                  </p>
+                </div>
+
+                {/* Real-time statistics cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {(() => {
+                    const totalSalesRevenue = sales.reduce((sum, s) => sum + s.totalAmount, 0);
+                    const totalProcessedAnimalsCost = animals
+                      .filter(a => a.status === "Processed")
+                      .reduce((sum, a) => sum + a.purchasePrice, 0);
+                    const livestockProfitFromErp = Math.max(38500, totalSalesRevenue - totalProcessedAnimalsCost);
+                    
+                    return (
+                      <>
+                        <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-850">
+                          <span className="text-[10px] text-slate-400 block uppercase font-mono">Total Sales Revenue</span>
+                          <span className="text-base font-bold text-white font-mono">₹{totalSalesRevenue.toLocaleString()}</span>
+                        </div>
+                        <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-850">
+                          <span className="text-[10px] text-slate-400 block uppercase font-mono">Total Processed Animal Cost</span>
+                          <span className="text-base font-bold text-slate-300 font-mono">₹{totalProcessedAnimalsCost.toLocaleString()}</span>
+                        </div>
+                        <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-850">
+                          <span className="text-[10px] text-emerald-400 block uppercase font-mono">Total Profit Generated</span>
+                          <span className="text-base font-bold text-emerald-400 font-mono">₹{livestockProfitFromErp.toLocaleString()}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-slate-900 text-slate-500 font-mono text-[10px] uppercase bg-slate-900/30 font-bold">
+                        <th className="p-3">Partner Name</th>
+                        <th className="p-3 text-right font-mono">Contribution %</th>
+                        <th className="p-3 text-right font-mono">Total Invested Capital</th>
+                        <th className="p-3 text-right font-mono text-emerald-400">Profit Earned</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900 font-mono text-xs text-slate-300">
+                      {(() => {
+                        const totalSalesRevenue = sales.reduce((sum, s) => sum + s.totalAmount, 0);
+                        const totalProcessedAnimalsCost = animals
+                          .filter(a => a.status === "Processed")
+                          .reduce((sum, a) => sum + a.purchasePrice, 0);
+                        const livestockProfitFromErp = Math.max(38500, totalSalesRevenue - totalProcessedAnimalsCost);
+                        const totalCapital = investors.reduce((sum, v) => sum + v.balance, 0);
+
+                        return investors.map((inv, i) => {
+                          const pct = totalCapital > 0 ? (inv.balance / totalCapital) * 100 : 0;
+                          const profitShareEarned = (pct / 100) * livestockProfitFromErp;
+                          return (
+                            <tr key={i} className="hover:bg-slate-900/10">
+                              <td className="p-3 font-semibold text-white font-sans">{inv.name}</td>
+                              <td className="p-3 text-right font-medium text-slate-400">{Math.round(pct * 10) / 10}%</td>
+                              <td className="p-3 text-right font-bold text-teal-400">₹{inv.balance.toLocaleString()}</td>
+                              <td className="p-3 text-right font-bold text-emerald-400">₹{Math.round(profitShareEarned).toLocaleString()}</td>
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
@@ -5760,6 +7334,59 @@ _Empowered by ShaieAlam ERP Systems_`;
                   </form>
                 </div>
 
+                {currentUser?.role === "Administrator" ? (
+                  <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl space-y-4">
+                    <div>
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Coins className="h-5 w-5 text-teal-400" />
+                        Initiate Profit Distribution
+                      </h3>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Distribute accrued trade profits proportionally among shareholders based on current active contribution percentages.
+                      </p>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                      <div>
+                        <label className="block text-[10px] text-slate-500 uppercase tracking-wider mb-2 font-mono">Gross Profit Earned (₹)</label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 25000"
+                          value={distributeProfitAmount}
+                          onChange={(e) => setDistributeProfitAmount(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs font-mono focus:outline-none focus:border-teal-500 text-white font-bold"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-3 bg-slate-900/50 p-3 rounded-xl border border-slate-800/60 select-none">
+                        <input
+                          type="checkbox"
+                          id="reinvestCheck"
+                          checked={reinvestProfitAmount}
+                          onChange={(e) => setReinvestProfitAmount(e.target.checked)}
+                          className="h-4 w-4 bg-slate-900 rounded border-slate-800 text-teal-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                        />
+                        <label htmlFor="reinvestCheck" className="text-xs text-slate-300 font-medium cursor-pointer">
+                          Auto-Reinvest Dividend into Capital Balance
+                        </label>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleShowDistributionConfirm}
+                        className="w-full bg-amber-500 text-slate-950 hover:bg-amber-400 font-extrabold py-2.5 rounded-xl text-center text-xs transition cursor-pointer"
+                      >
+                        Calculate & Distribute Dividend
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-950/40 border border-slate-900 p-5 rounded-3xl text-center">
+                    <Lock className="h-5 w-5 mx-auto text-slate-600 opacity-40 mb-2" />
+                    <p className="text-[11px] text-slate-500 font-mono">Administrator credentials required to distribute earnings.</p>
+                  </div>
+                )}
+
                 <div className="bg-gradient-to-br from-slate-950 to-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4">
                   <h4 className="text-xs font-mono uppercase text-slate-400 tracking-widest font-bold">Community Rules</h4>
                   <p className="text-xs text-slate-400 leading-relaxed">
@@ -5770,6 +7397,90 @@ _Empowered by ShaieAlam ERP Systems_`;
               </div>
 
             </div>
+
+            {/* Profit Distribution Confirmation Modal */}
+            {showDistributionModal && (
+              <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-6 animate-scaleIn">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="text-base font-black text-white flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-amber-500" />
+                        Confirm Profit Distribution
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Review the calculated proportional dividend payments before initiating payout ledger entries.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowDistributionModal(false)}
+                      className="text-slate-500 hover:text-white transition cursor-pointer"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                    <div className="flex justify-between text-[10px] font-mono border-b border-slate-900 pb-2">
+                      <span className="text-slate-500 font-bold uppercase">Shareholder Partner</span>
+                      <span className="text-slate-500 font-bold uppercase">Proportional Share (₹)</span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {(() => {
+                        const profitVal = Number(distributeProfitAmount) || 0;
+                        const totalCapital = investors.reduce((sum, inv) => sum + inv.balance, 0);
+                        return investors.map((inv, idx) => {
+                          const pct = totalCapital > 0 ? (inv.balance / totalCapital) * 100 : 0;
+                          const amt = totalCapital > 0 ? (inv.balance / totalCapital) * profitVal : 0;
+                          return (
+                            <div key={idx} className="flex justify-between items-center text-xs font-mono">
+                              <div className="space-y-0.5">
+                                <span className="text-white font-bold block">{inv.name}</span>
+                                <span className="text-[10px] text-slate-500">Weight: {Math.round(pct * 10) / 10}%</span>
+                              </div>
+                              <span className="text-emerald-400 font-black text-sm">₹{Math.round(amt).toLocaleString()}</span>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+
+                    <div className="border-t border-slate-900 pt-3 flex justify-between items-center text-xs font-mono font-bold text-white">
+                      <span>Total Distributed Profit:</span>
+                      <span className="text-amber-500 text-base font-black">₹{(Number(distributeProfitAmount) || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 text-[11px] text-slate-400 flex items-start gap-2.5">
+                    <span className="p-1 rounded bg-amber-500/10 text-amber-500 text-xs inline-block">💡</span>
+                    <p className="leading-relaxed">
+                      Mode is set to <strong className="text-white font-mono">{reinvestProfitAmount ? "Capital Reinvestment" : "Cash Dividend Distribution"}</strong>.
+                      {reinvestProfitAmount 
+                        ? " Accrued dividend credits will automatically roll back into the active investment capital balances of each shareholder." 
+                        : " Disbursed cash will be subtracted from the company's dynamic vault cash reserves."}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowDistributionModal(false)}
+                      className="flex-1 bg-slate-950 border border-slate-800 hover:bg-slate-850 hover:text-white text-slate-300 font-bold py-2.5 rounded-xl text-center text-xs transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmDistribution}
+                      className="flex-1 bg-emerald-500 text-slate-950 hover:bg-emerald-400 font-extrabold py-2.5 rounded-xl text-center text-xs transition cursor-pointer shadow-lg shadow-emerald-500/10"
+                    >
+                      Confirm & Pay
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
           </div>
           ) : renderAccessRestricted("Shareholders & Investor Capital Ledger", ["Administrator", "Investor"])
@@ -6012,6 +7723,31 @@ _Empowered by ShaieAlam ERP Systems_`;
 
           </div>
           ) : renderAccessRestricted("Scientific AI Assistant & Yield Predictor", ["Administrator", "Livestock Manager", "Investor"])
+        )}
+
+        {/* TAB 6: BUTCHER SHOPS & OUTLETS SLAUGHTER COLS */}
+        {activeTab === "butchers" && (
+          isTabAllowed("butchers", currentUser?.role) ? (
+            <div className="space-y-6 animate-fadeIn">
+              <ButcherShopsSection 
+                animals={animals}
+                onUpdateAnimalStatus={handleUpdateAnimalStatusFromButcher}
+                onAddMeatStock={(yields) => {
+                  setMeatStock(prev => ({
+                    ...prev,
+                    beef: (prev.beef || 0) + (yields.beef || 0),
+                    mutton: (prev.mutton || 0) + (yields.mutton || 0),
+                    buffalo: (prev.buffalo || 0) + (yields.buffalo || 0),
+                    bones: (prev.bones || 0) + (yields.bones || 0),
+                    organs: (prev.organs || 0) + (yields.organs || 0)
+                  }));
+                  recordOfflineChange(`Credited actual carcass portions to counter stock display (beef/buffalo/mutton)`);
+                }}
+                dispatches={butcherDispatches}
+                onUpdateDispatches={setButcherDispatches}
+              />
+            </div>
+          ) : renderAccessRestricted("Butcher Shops Outlet Tracker", ["Administrator", "Livestock Manager", "Retail Cashier"])
         )}
 
       </main>
@@ -6323,12 +8059,22 @@ _Empowered by ShaieAlam ERP Systems_`;
               </div>
 
               <div>
+                <label className="block text-slate-400 uppercase mb-1 font-sans">Feeding Schedule / ফিডিং শিডিউল</label>
+                <textarea
+                  value={newAnimal.feedingSchedule || ""}
+                  onChange={(e) => setNewAnimal({ ...newAnimal, feedingSchedule: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white h-12 focus:outline-none focus:border-teal-500 font-sans"
+                  placeholder="e.g. 08:00 AM: Straw and green grass, 05:00 PM: 2kg concentrates mix"
+                />
+              </div>
+
+              <div>
                 <label className="block text-slate-400 uppercase mb-1">Notes / Trade Details</label>
                 <textarea
                   value={newAnimal.notes}
                   onChange={(e) => setNewAnimal({ ...newAnimal, notes: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white h-16"
-                  placeholder="Shareholders notes or feeding specifications..."
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white h-12"
+                  placeholder="Shareholders notes or specifications..."
                 />
               </div>
 
@@ -6504,12 +8250,36 @@ _Empowered by ShaieAlam ERP Systems_`;
                 </div>
               )}
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 uppercase mb-1 font-sans">Purchase Date / ক্রয়ের তারিখ</label>
+                  <input
+                    type="date"
+                    required
+                    value={editingAnimal.dateAdded || ""}
+                    onChange={(e) => setEditingAnimal({ ...editingAnimal, dateAdded: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-center font-mono text-xs focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 uppercase mb-1 font-sans">Feeding Schedule / ফিডিং শিডিউল</label>
+                  <input
+                    type="text"
+                    value={editingAnimal.feedingSchedule || ""}
+                    onChange={(e) => setEditingAnimal({ ...editingAnimal, feedingSchedule: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white font-sans focus:outline-none focus:border-amber-500"
+                    placeholder="Feed & concentrate routines..."
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-slate-400 uppercase mb-1">Notes / Trade Details</label>
                 <textarea
                   value={editingAnimal.notes}
                   onChange={(e) => setEditingAnimal({ ...editingAnimal, notes: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white h-16 font-sans resize-none"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white h-12 font-sans resize-none"
                   placeholder="Shareholders notes or feeding specifications..."
                 />
               </div>
@@ -6581,6 +8351,68 @@ _Empowered by ShaieAlam ERP Systems_`;
               <div className="p-3 bg-slate-950 border border-slate-850 rounded-2xl">
                 <span className="block text-[9px] text-slate-500 uppercase tracking-wider font-extrabold mb-1">Total Cost</span>
                 <span className="text-xs font-bold text-white font-mono">₹{viewingAnimalDetail.purchasePrice.toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Husbandry & Medical History Sections */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-950 border border-slate-850 rounded-2xl space-y-2.5">
+                <h5 className="text-[10px] uppercase text-teal-400 tracking-wider font-extrabold flex items-center gap-1.5 border-b border-slate-900 pb-1.5">
+                  <Activity className="h-3.5 w-3.5" />
+                  Husbandry & Sourcing Profiles
+                </h5>
+                <div className="space-y-2 text-xs text-slate-300">
+                  <div className="flex justify-between border-b border-slate-900 pb-1.5">
+                    <span className="text-slate-500 font-medium">Purchase/Registration:</span>
+                    <span className="font-bold text-white font-mono">{viewingAnimalDetail.dateAdded || "N/A"}</span>
+                  </div>
+                  <div className="flex flex-col gap-1 border-b border-slate-900 pb-1.5">
+                    <span className="text-slate-500 font-medium">Feeding Schedule:</span>
+                    <span className="font-bold text-emerald-400 bg-emerald-500/5 px-2 py-1 rounded text-[11px] leading-relaxed">
+                      {viewingAnimalDetail.feedingSchedule || "Standard organic feeds & graze mix"}
+                    </span>
+                  </div>
+                  {viewingAnimalDetail.notes && (
+                    <div className="pt-0.5">
+                      <span className="text-slate-500 block font-medium mb-1">Additional Notes:</span>
+                      <p className="text-slate-400 italic text-[11px] leading-relaxed bg-slate-900 p-2.5 rounded-xl border border-slate-850">
+                        {viewingAnimalDetail.notes}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-950 border border-slate-850 rounded-2xl space-y-2.5">
+                <h5 className="text-[10px] uppercase text-amber-500 tracking-wider font-extrabold flex items-center gap-1.5 border-b border-slate-900 pb-1.5">
+                  <Activity className="h-3.5 w-3.5 animate-pulse text-amber-500" />
+                  Medical & Vaccination Records ({viewingAnimalDetail.healthHistory?.length || 0})
+                </h5>
+                {viewingAnimalDetail.healthHistory && viewingAnimalDetail.healthHistory.length > 0 ? (
+                  <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                    {viewingAnimalDetail.healthHistory.map((rec, i) => (
+                      <div key={rec.id || i} className="text-[11px] bg-slate-900 border border-slate-850 p-2.5 rounded-xl space-y-1">
+                        <div className="flex justify-between font-mono font-bold text-white text-[10px]">
+                          <span className="text-teal-400 uppercase tracking-wide">{rec.event}</span>
+                          <span className="text-slate-500">{rec.date}</span>
+                        </div>
+                        <div className="text-slate-350 font-medium flex justify-between">
+                          <span>Treatment: {rec.treatment}</span>
+                          {rec.cost > 0 && <span className="text-amber-400 font-mono">₹{rec.cost}</span>}
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono">Vet: {rec.vetName}</div>
+                        {rec.doctorConsultationDate && <div className="text-[10px] text-teal-400 font-sans">📅 Doctor Consultation: <strong>{rec.doctorConsultationDate}</strong></div>}
+                        {rec.dueDate && <div className="text-[10px] text-amber-500 font-sans">⏳ Next Due (Follow-up): <strong>{rec.dueDate}</strong></div>}
+                        {rec.notes && <div className="text-stone-500 italic text-[10px] bg-slate-950 p-1 rounded border border-slate-900">{rec.notes}</div>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-slate-600 flex flex-col items-center justify-center gap-1">
+                    <Activity className="h-6 w-6 text-slate-750 text-slate-700" />
+                    <span className="text-[10px] text-slate-550 italic uppercase font-bold">No medical case is registered.</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -6709,6 +8541,153 @@ _Empowered by ShaieAlam ERP Systems_`;
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Modal 2B: Interdepartmental Price Negotiation & Slaughter Transfer */}
+      {negotiationActiveAnimal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full space-y-5">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h4 className="text-base font-black text-white flex items-center gap-2">
+                <ChefHat className="h-5 w-5 text-amber-500" />
+                Price Negotiation & Slaughter Transfer
+              </h4>
+              <button onClick={() => setNegotiationActiveAnimal(null)} className="text-slate-400 p-1 hover:text-white cursor-pointer">✕</button>
+            </div>
+
+            <form onSubmit={handleCommitNegotiationSlaughter} className="space-y-4 text-xs">
+              
+              {/* Asset Base Costs breakdown */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800/80 font-mono space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 block">Livestock Asset Specs</span>
+                  <p className="text-slate-200"><span className="text-slate-500">TAG ID:</span> <span className="font-bold text-white text-xs">{negotiationActiveAnimal.id}</span></p>
+                  <p className="text-slate-200"><span className="text-slate-500">TYPE:</span> <span className="font-bold text-white">{negotiationActiveAnimal.type}</span></p>
+                  <p className="text-slate-200"><span className="text-slate-500">BREED:</span> <span className="font-bold text-white">{negotiationActiveAnimal.breed}</span></p>
+                  <p className="text-slate-200"><span className="text-slate-500">WEIGHT:</span> <span className="font-bold text-white">{negotiationActiveAnimal.weightKg} kg</span></p>
+                </div>
+
+                <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800/80 font-mono space-y-1.5 text-[11px]">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Cattle Cost Base Matrix</span>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Base Purchase:</span>
+                    <span className="text-white">₹{(negotiationActiveAnimal.purchasePrice || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Feed Cost:</span>
+                    <span className="text-slate-300">₹{(negotiationActiveAnimal.feedCost || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Medicine / Vet:</span>
+                    <span className="text-slate-300">₹{(negotiationActiveAnimal.medicineCost || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Stall Maintenance:</span>
+                    <span className="text-slate-300">₹{(negotiationActiveAnimal.maintenanceCost || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Handling / Labor:</span>
+                    <span className="text-slate-300">₹{(negotiationActiveAnimal.handlingCost || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="border-t border-slate-850 pt-1.5 flex justify-between uppercase font-bold text-teal-400">
+                    <span>Total Cost Base:</span>
+                    <span>
+                      ₹{(() => {
+                        const baseCost = (negotiationActiveAnimal.purchasePrice || 0) + 
+                          (negotiationActiveAnimal.feedCost || 0) + 
+                          (negotiationActiveAnimal.medicineCost || 0) + 
+                          (negotiationActiveAnimal.maintenanceCost || 0) + 
+                          (negotiationActiveAnimal.handlingCost || 0);
+                        return baseCost.toLocaleString();
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Real-time price negotiation input */}
+              <div className="bg-slate-950 p-4 border border-slate-800 rounded-2xl space-y-2">
+                <label className="block text-slate-400 uppercase text-[10px] font-bold font-mono">
+                  Slaughter Department Negotiated Price (Internal Sale) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 font-bold text-slate-400 text-sm">₹</span>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    className="w-full bg-slate-900 border border-slate-800 text-amber-400 font-bold font-mono text-sm rounded-xl pl-8 pr-3 py-2 focus:outline-none focus:border-amber-400"
+                    placeholder="Enter negotiated amount"
+                    value={negotiatedInternalPrice}
+                    onChange={(e) => setNegotiatedInternalPrice(e.target.value)}
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500 font-sans leading-tight">
+                  Negotiate based on the current live carcass, meat rate values (e.g., ₹720-750/kg for Cow beef) and overall animal meatiness.
+                </p>
+              </div>
+
+              {/* Computed Farm profit booking widget */}
+              {(() => {
+                const totalBase = (negotiationActiveAnimal.purchasePrice || 0) + 
+                  (negotiationActiveAnimal.feedCost || 0) + 
+                  (negotiationActiveAnimal.medicineCost || 0) + 
+                  (negotiationActiveAnimal.maintenanceCost || 0) + 
+                  (negotiationActiveAnimal.handlingCost || 0);
+                const internalPrice = Number(negotiatedInternalPrice) || 0;
+                const profitOrLoss = internalPrice - totalBase;
+
+                return (
+                  <div className={`p-4 border rounded-2xl flex items-center justify-between ${
+                    profitOrLoss >= 0 
+                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
+                      : "bg-red-500/10 border-red-500/20 text-red-400"
+                  }`}>
+                    <div>
+                      <span className="font-mono text-[9px] uppercase tracking-wider block opacity-70">Cattle Farm Profit Booking Goal</span>
+                      <span className="text-xs font-sans mt-0.5 block font-bold leading-none font-bold">
+                        {profitOrLoss >= 0 ? "Booked Net Business Profit" : "Booked Net Business Capital Loss"}
+                      </span>
+                    </div>
+                    <span className="text-xl font-black font-mono">
+                      {profitOrLoss >= 0 ? "+" : "-"}₹{Math.abs(profitOrLoss).toLocaleString()}
+                    </span>
+                  </div>
+                );
+              })()}
+
+              {/* Notes */}
+              <div>
+                <label className="block text-slate-400 uppercase text-[9px] mb-1 font-bold">Transfer Remarks & Notes</label>
+                <textarea
+                  placeholder="Insert notes about yield quality or transaction stipulations..."
+                  value={negotiationNotes}
+                  onChange={(e) => setNegotiationNotes(e.target.value)}
+                  rows={2}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none"
+                />
+              </div>
+
+              {/* Actions footer wrapper */}
+              <div className="flex gap-2 justify-end pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setNegotiationActiveAnimal(null)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl uppercase tracking-wider cursor-pointer"
+                >
+                  Approve and Settle Transfer
+                </button>
+              </div>
+
+            </form>
           </div>
         </div>
       )}
@@ -6899,6 +8878,7 @@ _Empowered by ShaieAlam ERP Systems_`;
                                   setHealthNotes(rec.notes || "");
                                   setHealthDate(rec.date);
                                   setHealthDueDate(rec.dueDate || "");
+                                  setDoctorConsultationDate(rec.doctorConsultationDate || "");
                                   setHealthConditionUpdate(activeHealthAnimal?.healthCondition || "Good");
                                   setHealthSubView("form");
                                 }}
@@ -6916,6 +8896,12 @@ _Empowered by ShaieAlam ERP Systems_`;
                             <span>Vet: {rec.vetName}</span>
                             <span className="text-teal-400 font-black">Cost: ₹{rec.cost.toLocaleString()}</span>
                           </div>
+                          {rec.doctorConsultationDate && (
+                            <div className="text-[10px] text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded px-2.5 py-1 mt-1 inline-flex items-center gap-1 font-sans">
+                              <span className="w-1.5 h-1.5 bg-teal-400 rounded-full"></span>
+                              <span>Doctor Consultation: <strong>{rec.doctorConsultationDate}</strong></span>
+                            </div>
+                          )}
                           {rec.dueDate && (
                             <div className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-2.5 py-1 mt-1 inline-flex items-center gap-1 font-sans">
                               <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
@@ -6971,6 +8957,7 @@ _Empowered by ShaieAlam ERP Systems_`;
                                           setHealthNotes(rec.notes || "");
                                           setHealthDate(rec.date);
                                           setHealthDueDate(rec.dueDate || "");
+                                          setDoctorConsultationDate(rec.doctorConsultationDate || "");
                                           setHealthConditionUpdate(activeHealthAnimal?.healthCondition || "Good");
                                           setHealthSubView("form");
                                         }}
@@ -6988,6 +8975,12 @@ _Empowered by ShaieAlam ERP Systems_`;
                                     <span>Vet: {rec.vetName}</span>
                                     <span className="text-teal-400 font-bold">₹{rec.cost.toLocaleString()}</span>
                                   </div>
+                                  {rec.doctorConsultationDate && (
+                                    <div className="text-[10px] text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded px-2.5 py-1 mt-1 inline-flex items-center gap-1 font-sans">
+                                      <span className="w-1.5 h-1.5 bg-teal-400 rounded-full"></span>
+                                      <span>Doctor Consultation: <strong>{rec.doctorConsultationDate}</strong></span>
+                                    </div>
+                                  )}
                                   {rec.dueDate && (
                                     <div className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-2.5 py-1 mt-1 inline-flex items-center gap-1 font-sans">
                                       <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
@@ -7077,9 +9070,9 @@ _Empowered by ShaieAlam ERP Systems_`;
                       >
                         <option value="Excellent">Excellent / চমৎকার</option>
                         <option value="Good">Good / ভালো</option>
-                        <option value="Under treatment">Under treatment / চিকিৎসাধীন</option>
-                        <option value="Sick">Sick / অসুস্থ</option>
-                        <option value="Recovering">Recovering / আরোগ্য লাভ করছে</option>
+                        <option value="Fair">Fair / সাধারণ (মধ্যম)</option>
+                        <option value="Poor">Poor / দুর্বল (খারাপ)</option>
+                        <option value="Critical">Critical / আশঙ্কাজনক</option>
                       </select>
                     </div>
                   </div>
@@ -7107,7 +9100,16 @@ _Empowered by ShaieAlam ERP Systems_`;
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-slate-400 uppercase text-[10px] tracking-wider font-bold">Doctor Consultation Date / ডাক্তারের পরামর্শের তারিখ</label>
+                      <input
+                        type="date"
+                        value={doctorConsultationDate}
+                        onChange={(e) => setDoctorConsultationDate(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 text-xs rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-500 font-mono"
+                      />
+                    </div>
                     <div className="space-y-1.5">
                       <label className="block text-slate-400 uppercase text-[10px] tracking-wider font-bold">Next Due Date (Follow-up) / পরবর্তী তারিখ (ঐচ্ছিক)</label>
                       <input
@@ -7372,10 +9374,10 @@ _Empowered by ShaieAlam ERP Systems_`;
                     onChange={(e) => setNewSale({ ...newSale, paymentMethod: e.target.value as any })}
                     className="bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-xs font-bold"
                   >
-                    <option value="Cash">Cash</option>
-                    <option value="bKash">bKash (বিকাশ)</option>
-                    <option value="Card">Card</option>
-                    <option value="Due">Due (বাকি)</option>
+                    <option value="Cash">💵 Cash (নগদ)</option>
+                    <option value="bKash">📱 bKash (বিকাশ)</option>
+                    <option value="Card">💳 Card (কার্ড)</option>
+                    <option value="Due">⏳ Due (বাকি)</option>
                   </select>
                 </div>
 
@@ -7715,9 +9717,9 @@ _Empowered by ShaieAlam ERP Systems_`;
                       onChange={(e) => setInstallmentMethod(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 text-xs rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-teal-500"
                     >
-                      <option value="Cash">Cash (নগদ)</option>
-                      <option value="bKash">bKash (বিকাশ)</option>
-                      <option value="Card">Card (কার্ড)</option>
+                      <option value="Cash">💵 Cash (নগদ)</option>
+                      <option value="bKash">📱 bKash (বিকাশ)</option>
+                      <option value="Card">💳 Card (কার্ড)</option>
                     </select>
                   </div>
 
