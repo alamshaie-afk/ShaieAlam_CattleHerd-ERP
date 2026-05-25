@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   TrendingUp, 
+  Calculator,
   DollarSign, 
   AlertTriangle, 
   Activity, 
@@ -60,253 +61,32 @@ import { SupplierRemindersPanel } from "./components/SupplierRemindersPanel";
 import { ButcherShopsSection } from "./components/ButcherShopsSection";
 import { BrandLogo } from "./components/BrandLogo";
 
-// Indian Market Breed lists for different livestock classes
-export const COW_BREEDS = [
-  "Local Desi",
-  "Tripura Local",
-  "Jersey",
-  "Jersey Cross",
-  "Holstein Friesian (HF)",
-  "HF Cross",
-  "Sahiwal",
-  "Sahiwal Cross",
-  "Gir",
-  "Gir Cross",
-  "Red Sindhi",
-  "Red Sindhi Cross",
-  "Tharparkar",
-  "Kankrej",
-  "Ongole",
-  "Hariana",
-  "Siri",
-  "Hill Cattle",
-  "Indigenous Crossbreed",
-  "Desi Cross",
-  "Dairy Crossbreed",
-  "Local Hill-Type Cattle",
-  "Mixed Breed Cattle",
-  "Frieswal",
-  "Holdeo",
-  "Sunandini",
-  "Brown Swiss Cross",
-  "Ayrshire Cross",
-  "Local Buffalo-Type Cross Cattle"
-];
+import { 
+  COW_BREEDS, 
+  GOAT_BREEDS, 
+  BUFFALO_BREEDS, 
+  SHEEP_BREEDS, 
+  MITHUN_BREEDS, 
+  getBreedsForType 
+} from "./constants/breeds";
 
-export const GOAT_BREEDS = [
-  "Black Bengal",
-  "Jamunapari",
-  "Barbari",
-  "Beetal",
-  "Sirohi",
-  "Jakhrana",
-  "Osmanabadi",
-  "Malabari (Tellicherry)",
-  "Sojat",
-  "Kanni",
-  "Sangamneri",
-  "Surti Goat",
-  "Zalawadi",
-  "Gaddi",
-  "Changthangi",
-  "Chegu",
-  "Barbari Cross",
-  "Sirohi Cross",
-  "Black Bengal Cross",
-  "Local Desi Goat"
-];
+import { translations } from "./constants/translations";
 
-export const BUFFALO_BREEDS = [
-  "Murrah",
-  "Surti",
-  "Jaffarabadi",
-  "Mehsana",
-  "Nili-Ravi",
-  "Bhadawari",
-  "Toda",
-  "Banni",
-  "Chilika",
-  "Kalahandi",
-  "Luit (Swamp)",
-  "Pandharpuri",
-  "Murrah Cross",
-  "Local Desi Buffalo"
-];
+import type { 
+  UserRole, 
+  UserSession, 
+  Investor, 
+  HealthRecord, 
+  BatchProcessLog, 
+  Animal, 
+  SaleItem, 
+  Installment, 
+  Sale 
+} from "./types";
 
-export const SHEEP_BREEDS = [
-  "Nellore",
-  "Marwari",
-  "Deccani",
-  "Bellary",
-  "Ganjam",
-  "Kathiawari",
-  "Mandya",
-  "Chokla",
-  "Magra",
-  "Nali",
-  "Sonadi",
-  "Jaisalmeri",
-  "Malpura",
-  "Muzzafarnagri",
-  "Avikalin",
-  "Kashmir Merino",
-  "Gaddi Sheep",
-  "Rambouillet Cross",
-  "Merino Cross",
-  "Local Desi Sheep"
-];
 
-export const MITHUN_BREEDS = [
-  "Arunachal Mithun",
-  "Nagaland Mithun",
-  "Manipur Mithun",
-  "Mizoram Mithun",
-  "Mithun Cross",
-  "Local Mithun"
-];
 
-export const getBreedsForType = (type: string): string[] => {
-  const t = (type || "").toLowerCase();
-  if (t.includes("goat")) {
-    return GOAT_BREEDS;
-  }
-  if (t.includes("buffalo")) {
-    return BUFFALO_BREEDS;
-  }
-  if (t.includes("sheep")) {
-    return SHEEP_BREEDS;
-  }
-  if (t.includes("mithun")) {
-    return MITHUN_BREEDS;
-  }
-  return COW_BREEDS;
-};
 
-// Types
-type UserRole = "Administrator" | "Livestock Management" | "Butcher Shop" | "Collections" | "Feed Shop" | "Livestock Manager" | "Retail Cashier" | "Investor";
-
-interface UserSession {
-  uid: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  role: UserRole;
-  avatarUrl?: string;
-  authMethod: "Social" | "Email" | "Phone" | "Demo";
-  provider?: string;
-}
-
-interface Investor {
-  name: string;
-  contribution: number;
-}
-
-interface HealthRecord {
-  id: string;
-  date: string;
-  event: string;
-  treatment: string;
-  vetName: string;
-  cost: number;
-  notes?: string;
-  dueDate?: string;
-  doctorConsultationDate?: string;
-}
-
-interface BatchProcessLog {
-  id: string;
-  date: string;
-  animalCount: number;
-  animalIds: string[];
-  totalWeightKg: number;
-  yieldRatio: number;
-  addedStock: {
-    beef: number;
-    mutton: number;
-    buffalo: number;
-    bones: number;
-    organs: number;
-  };
-  operator: string;
-}
-
-interface Animal {
-  id: string;
-  type: "Cow" | "Goat" | "Buffalo" | "Sheep" | "Mithun";
-  breed: string;
-  owner: string;
-  weightKg: number;
-  purchasePrice: number;
-  advancePaid: number;
-  due: number;
-  status: "Pending" | "Paid" | "Overdue" | "Processed";
-  investors: Investor[];
-  dateAdded: string;
-  ageMonths?: number;
-  birthDate?: string;
-  feedType?: string;
-  healthCondition?: string;
-  notes?: string;
-  feedingSchedule?: string;
-  dueDate?: string;
-  isCached?: boolean;
-  healthHistory?: HealthRecord[];
-  frontImage?: string;
-  leftSideImage?: string;
-  rightSideImage?: string;
-  backsideImage?: string;
-  teethImage?: string;
-  color?: string;
-  appearance?: string;
-  isFromBazar?: boolean;
-  bazarReceiptImage?: string;
-  bazarName?: string;
-  feedCost?: number;
-  medicineCost?: number;
-  maintenanceCost?: number;
-  handlingCost?: number;
-  slaughterNegotiatedPrice?: number;
-  slaughterProfitOrLoss?: number;
-}
-
-interface SaleItem {
-  type: string;
-  weightKg: number;
-  ratePerKg: number;
-  amount: number;
-}
-
-interface Installment {
-  id: string;
-  date: string;
-  amount: number;
-  paymentMethod: string;
-  notes: string;
-  upcomingCollectionDate?: string;
-  nextCollectionDate?: string;
-  specialNotes?: string;
-  collectionNotes?: string;
-}
-
-interface Sale {
-  id: string;
-  customerName: string;
-  customerPhone: string;
-  customerCode?: string;
-  items: SaleItem[];
-  totalAmount: number;
-  paymentMethod: "Cash" | "bKash" | "Card" | "Due";
-  date: string;
-  bengaliSms?: string;
-  amountPaid?: number;
-  amountDue?: number;
-  isCached?: boolean;
-  dueDate?: string;
-  upcomingCollectionDate?: string;
-  nextCollectionDate?: string;
-  collectionNotes?: string;
-  installments?: Installment[];
-}
 
 const DEMO_PROFILES: UserSession[] = [
   {
@@ -357,6 +137,7 @@ const DEMO_PROFILES: UserSession[] = [
 ];
 
 function isTabAllowed(tabId: string, role?: UserRole): boolean {
+  if (tabId === "home") return true;
   if (!role) return false;
   if (role === "Administrator") return true;
 
@@ -387,204 +168,6 @@ function isTabAllowed(tabId: string, role?: UserRole): boolean {
   return false;
 }
 
-// Language translations helper
-const translations = {
-  en: {
-    appTitle: "ShaieAlam LiveStock ERP",
-    tagline: "Offline-Ready Livestock Trading & Meat Retail Counter",
-    dashboard: "Overview Dashboard",
-    livestock: "Cattle Farm",
-    retail: "Retail POS Counter",
-    investments: "Shares & Investors",
-    aiAssistant: "Smart AI Assistant",
-    butchers: "Butcher Shop",
-    cattleFeed: "Cattle Feed",
-    todaysSales: "Today's Sales",
-    pendingDues: "Pending Supplier Dues",
-    activeCount: "Active Animals",
-    lowStockAlerts: "Stock Alerts",
-    addAnimalBtn: "Add Animal Purchase",
-    processAnimalBtn: "Slice & Process Animal",
-    settleDuesBtn: "Settle Owed Dues",
-    searchPlaceholder: "Search ID, breed, owner, class...",
-    id: "ID",
-    type: "Type",
-    breed: "Breed",
-    weight: "Weight (Live)",
-    cost: "Purchase Price",
-    advance: "Advance Paid",
-    due: "Owed Due",
-    status: "Status",
-    owner: "Livestock Owner",
-    actions: "Actions",
-    noRecords: "No matching records found.",
-    active: "Active / Live",
-    processed: "Processed / Sliced",
-    paid: "Paid / Complete",
-    pending: "Pending Payment",
-    overdue: "Overdue",
-    saveBtn: "Save Record",
-    cancelBtn: "Cancel",
-    meatDisplays: "Fresh Meat Display Stocks",
-    checkout: "Fresh Retail Checkout",
-    customerName: "Customer Name",
-    customerPhone: "Customer Mobile",
-    item: "Cuts Category",
-    weightKg: "Weight (kg)",
-    ratePerKg: "Rate / kg",
-    amount: "Subtotal",
-    paymentMethod: "Payment Method",
-    issueInvoice: "Record & Generate Receipt",
-    recentSales: "Recent Retail Transactions",
-    investorsTitle: "Community Investment Pool",
-    investorName: "Investor Name",
-    contributionAmount: "Capital Invested",
-    shareholdersLedger: "Shareholders Ledger",
-    aiEstimates: "Gemini Profit Predictor",
-    aiEstimatesDesc: "Analyze animal features (weight, breed, age) to forecast dressing yield cuts and premium local pricing.",
-    promptInput: "Ask the AI Assistant about livestock nutrition, disease management, or processing tips...",
-    calculateBtn: "Calculate Prediction",
-    draftingDoc: "Drafting Document...",
-    generatingAlerts: "Synthesizing Smart Insights...",
-    bengaliUiLabel: "Bengali Quick Reference",
-    syncOnline: "Online",
-    syncOffline: "Offline Mode",
-    syncSyncing: "Offline - Syncing",
-    syncComplete: "Sync Complete",
-    syncChangesCached: "Changes Cached",
-    syncTriggerBtn: "Sync Now",
-    simulateOfflineLabel: "Simulate Offline State",
-    cachedCountLabel: "Cached changes pending sync",
-    cachedListTitle: "Pending Queue List",
-    roleAdmin: "Administrator",
-    roleLivestockManager: "Livestock Manager",
-    roleRetailCashier: "Retail Cashier",
-    roleInvestor: "Investor",
-    loginTitle: "ShaieAlam Identity Hub",
-    loginSubtitle: "Secure Multi-Role Access & Cross-Network Sync Portal",
-    socialAuthTitle: "Social Identity Sign-In",
-    credAuthTitle: "Secure Corporate Sign-In",
-    emailPlaceholder: "enter corporate email (e.g. admin@meatflow.com)",
-    phonePlaceholder: "enter standard mobile (e.g. +880 or +91)",
-    emailLinkBtn: "Send Magic Activation Link",
-    phoneOtpBtn: "Send OTP Secret Code",
-    otpPrompt: "Verify SMS One-Time Pin",
-    otpPlaceholder: "Enter 6-digit pin code",
-    otpVerifyBtn: "Authenticate Device",
-    presetTitle: "Identity Evaluation Quick Bypass",
-    presetSubtitle: "To inspect RBAC policies and permission gates, tap a preset profile:",
-    adminDesc: "God Mode: Access all tables, process livestock, and adjust billing ledger.",
-    livestockDesc: "Can manage and process livestock. Restricted from Sales & Investors.",
-    cashierDesc: "Can issue invoices & monitor cuts. Restricted from Livestock & Investors.",
-    investorDesc: "Can view Ledger & inject capital. Restricted from buying or cuts.",
-    permissionDenied: "Permission Denied",
-    restrictedSection: "This section is restricted to your role: ",
-    requiredRoles: "Required Roles: ",
-    currentRoleLabel: "Your active session role is: ",
-    requestOverrideBtn: "Request Temporary Admin Override",
-    signCertificateBtn: "Sign Security Clearance",
-    signOutBtn: "Log Out Portfolio",
-    profileTitle: "Logged Profile"
-  },
-  bn: {
-    appTitle: "শাইআলম লাইভস্টক ইআরপি",
-    tagline: "অফলাইন-বান্ধব পশু ক্রয়-বিক্রয় ও খুচরা মাংসের হিসাব",
-    dashboard: "ড্যাশবোর্ড ওভারভিউ",
-    livestock: "ক্যাটেল ফার্ম (পশু খামার)",
-    retail: "খুচরা মিট কাউন্টার",
-    investments: "বিনিয়োগ ও অংশীদার",
-    aiAssistant: "স্মার্ট এআই সহকারী",
-    butchers: "বাচার শপ (কসাইখানা)",
-    cattleFeed: "ক্যাটেল ফিড (পশুর খাদ্য)",
-    todaysSales: "আজকের মোট বিক্রয়",
-    pendingDues: "সরবরাহকারীর বকেয়া পাওনা",
-    activeCount: "জীবیت পশু মজুদ",
-    lowStockAlerts: "কম স্টকের সতর্কতা",
-    addAnimalBtn: "নতুন পশু যোগ করুন",
-    processAnimalBtn: "মাংস কাটাই ও প্রসেস",
-    settleDuesBtn: "বকেয়া টাকা পরিশোধ",
-    searchPlaceholder: "আইডি, ব্রিড বা মালিক খুঁজুন...",
-    id: "আইডি",
-    type: "পশুর ধরন",
-    breed: "জাত / ব্রিড",
-    weight: "লাইভ ওজন (কেজি)",
-    cost: "ক্রয় মূল্য",
-    advance: "অগ্রিম পেইড",
-    due: "বাকি টাকা পরিশোধ",
-    status: "অবস্থা",
-    owner: "পশুর মূল মালিক",
-    actions: "পদক্ষেপ",
-    noRecords: "কোন রেকর্ড পাওয়া যায়নি।",
-    active: "জীবিত মজুদ আছে",
-    processed: "মাংস কাটা হয়েছে",
-    paid: "সম্পূর্ণ পরিশোধিত",
-    pending: "বকেয়া সরবরাহকারী",
-    overdue: "মেয়াদোত্তীর্ণ বকেয়া",
-    saveBtn: "রেকর্ড সংরক্ষণ করুন",
-    cancelBtn: "বাতিল করুন",
-    meatDisplays: "কাউন্টারে বিক্রয়যোগ্য মাংসের মজুদ",
-    checkout: "খুচরা বিলিং কাউন্টার",
-    customerName: "ক্রেতার নাম",
-    customerPhone: "ক্রেতার মোবাইল",
-    item: "মাংসের ধরন",
-    weightKg: "ওজন (কেজি)",
-    ratePerKg: "প্রতি কেজি দর",
-    amount: "মোট সাবটোটাল",
-    paymentMethod: "পরিশোধের মাধ্যম",
-    issueInvoice: "রশিদ তৈরি করুন",
-    recentSales: "সাম্প্রতিক খুচরা বিক্রয় তালিকা",
-    investorsTitle: "যৌথ মূলধন সঞ্চয় ফান্ড",
-    investorName: "বিনিয়োগকারীর নাম",
-    contributionAmount: "জমা কৃত মূলধন",
-    shareholdersLedger: "শেয়ারহোল্ডারদের লেজার",
-    aiEstimates: "জেমিনি এআই লাভ পূর্বাভাসক",
-    aiEstimatesDesc: "পশুর জাত, বয়স ও ওজন বিশ্লেষণ করে ড্রেসিং হারের নিখুঁত মাংসের পরিমাণ ও লাভজনক দর নির্ধারণ করুন।",
-    promptInput: "পশুর পুষ্টি, রোগ ব্যবস্থাপনা, বা মাংস প্রসেস করার বিষয়ে এআই সহকারীকে জিজ্ঞাসা করুন...",
-    calculateBtn: "পূর্বাভাস শুরু করুন",
-    draftingDoc: "দলিল প্রস্তুত হচ্ছে...",
-    generatingAlerts: "স্মার্ট তথ্য বিশ্লেষণ হচ্ছে...",
-    bengaliUiLabel: "বাংলা কুইক রেফারেন্স",
-    syncOnline: "অনлайн (সংযুক্ত)",
-    syncOffline: "অফলাইন মোড",
-    syncSyncing: "অফলাইন - সিঙ্ক হচ্ছে",
-    syncComplete: "সিঙ্ক সম্পন্ন হয়েছে",
-    syncChangesCached: "ডাটা ক্যাশ করা হয়েছে",
-    syncTriggerBtn: "সিঙ্ক করুন",
-    simulateOfflineLabel: "অফলাইন মোড সিমুলেট করুন",
-    cachedCountLabel: "ক্যাশে রাখা পেন্ডিং পরিবর্তন",
-    cachedListTitle: "পেন্ডিং কিউ তালিকা",
-    roleAdmin: "অ্যাডমিনিস্ট্রেটর (Admin)",
-    roleLivestockManager: "লাইভস্টক ম্যানেজার (Manager)",
-    roleRetailCashier: "খুচরা ক্যাশিয়ার (Cashier)",
-    roleInvestor: "বিনিয়োগকারী (Investor)",
-    loginTitle: "শাইআলম আইডেন্টিটি পোর্টাল",
-    loginSubtitle: "সুরক্ষিত মাল্টি-রোল অ্যাক্সেস ও ক্রস-নেটওয়ার্ক সিঙ্ক পোর্টাল",
-    socialAuthTitle: "সোশ্যাল আইডি সাইন-ইন",
-    credAuthTitle: "নিরাপদ কর্পোরেট সাইন-ইন",
-    emailPlaceholder: "কর্পোরেট ইমেল লিখুন (যেমন: admin@meatflow.com)",
-    phonePlaceholder: "মোবাইল নম্বর লিখুন (যেমন: +৮৮০ বা +৯১)",
-    emailLinkBtn: "ম্যাজিক অ্যাক্টিভেশন লিঙ্ক পাঠান",
-    phoneOtpBtn: "ওটিপি (OTP) কোড পাঠান",
-    otpPrompt: "এসএমএস ওটিপি (OTP) যাচাই করুন",
-    otpPlaceholder: "৬ ডিজিটের ওটিপি টাইপ করুন",
-    otpVerifyBtn: "ডিভাইস অথেন্টিকেট করুন",
-    presetTitle: "অ্যাক্সেস টিউন এবং ডেমো বাইপাস",
-    presetSubtitle: "রোল-ভিত্তিক পারমিশন এবং সিকিউরিটি চেক পরীক্ষা করতে একটি প্রোফাইল বেছে নিন:",
-    adminDesc: "গড মোড: সকল তালিকা দেখতে, পশু প্রসেস করতে এবং বিল ট্র্যাকিং করতে পারবেন।",
-    livestockDesc: "পশু মজুদ ও কসাইখানা নিয়ন্ত্রণ করতে পারবেন। খুচরা বিক্রয় ও শেয়ার হোল্ডারে অ্যাক্সেস নেই।",
-    cashierDesc: "খুচরা বিক্রয় করতে ও রশিদ প্রস্তুত করতে পারবেন। পশুর মজুদ ও মূলধন ইনফোতে অ্যাক্সেস নেই।",
-    investorDesc: "বিনিয়োগকারী লেজার দেখতে ও পুঁজি যোগ করতে পারবেন। পশু প্রসেস বা বিক্রয় করতে পারবেন না।",
-    permissionDenied: "অনুমতি অস্বীকার (Permission Denied)",
-    restrictedSection: "এই অংশটি শুধুমাত্র আপনার নির্দিষ্ট রোলের জন্য অনুমতিপ্রাপ্ত: ",
-    requiredRoles: "প্রয়োজনীয় রোল সমূহ: ",
-    currentRoleLabel: "আপনার বর্তমান একটিভ রোল হল: ",
-    requestOverrideBtn: "অস্থায়ী এডমিন ওভাররাইডের অনুরোধ",
-    signCertificateBtn: "নিরাপত্তা ছাড়পত্রে স্বাক্ষর করুন",
-    signOutBtn: "সেশন লক করুন",
-    profileTitle: "ইউজার প্রোফাইল"
-  }
-};
-
 const initialAnimals: Animal[] = [
   { 
     id: "ANI-001", 
@@ -593,9 +176,9 @@ const initialAnimals: Animal[] = [
     owner: "Shaie", 
     weightKg: 280, 
     purchasePrice: 65000, 
-    advancePaid: 53000, 
-    due: 12000, 
-    status: "Pending", 
+    advancePaid: 65000, 
+    due: 0, 
+    status: "Paid", 
     investors: [{ name: "Anis", contribution: 30000 }, { name: "Rafiq", contribution: 23000 }], 
     dateAdded: "2026-05-15", 
     ageMonths: 24, 
@@ -632,9 +215,9 @@ const initialAnimals: Animal[] = [
     owner: "Rafiq", 
     weightKg: 380, 
     purchasePrice: 85000, 
-    advancePaid: 65000, 
-    due: 20000, 
-    status: "Overdue", 
+    advancePaid: 83000, 
+    due: 2000, 
+    status: "Pending", 
     investors: [{ name: "Anis", contribution: 65000 }], 
     dateAdded: "2026-05-10", 
     ageMonths: 36, 
@@ -710,6 +293,152 @@ const initialSales: Sale[] = [
     installments: [
       { id: "INST-102", date: "2026-05-14", amount: 1000, paymentMethod: "Cash", notes: "Token deposit at checkout." }
     ]
+  },
+  {
+    id: "SALE-104",
+    customerName: "Asab - Hita Monaf Mamu Son",
+    customerPhone: "01844556677",
+    customerCode: "1004",
+    items: [{ type: "Beef Extra Lean", weightKg: 2, ratePerKg: 750, amount: 1500 }],
+    totalAmount: 1500,
+    paymentMethod: "Due",
+    date: "2026-05-23T11:00:00Z",
+    amountPaid: 1200,
+    amountDue: 300,
+    dueDate: "2026-05-30",
+    installments: [
+      { id: "INST-104", date: "2026-05-24", amount: 1200, paymentMethod: "Cash", notes: "Part payment received" }
+    ]
+  },
+  {
+    id: "SALE-105",
+    customerName: "Sabir ( Gous's Son - Khastilla - DHARMANAGAR )",
+    customerPhone: "01788990011",
+    customerCode: "1005",
+    items: [{ type: "Premium Mutton Slices", weightKg: 6.7, ratePerKg: 1000, amount: 6700 }],
+    totalAmount: 6700,
+    paymentMethod: "Due",
+    date: "2026-05-19T15:28:00Z",
+    amountPaid: 0,
+    amountDue: 6700,
+    dueDate: "2026-05-26",
+    installments: []
+  },
+  {
+    id: "SALE-106",
+    customerName: "Rahul Uddin Poson Mamu Son",
+    customerPhone: "01911223344",
+    customerCode: "1006",
+    items: [{ type: "Buffalo High Choice", weightKg: 5, ratePerKg: 760, amount: 3800 }],
+    totalAmount: 3800,
+    paymentMethod: "Due",
+    date: "2026-05-19T09:45:00Z",
+    amountPaid: 200,
+    amountDue: 3600,
+    dueDate: "2026-05-26",
+    installments: [
+      { id: "INST-106", date: "2026-05-19", amount: 200, paymentMethod: "bKash", notes: "Booking token" }
+    ]
+  },
+  {
+    id: "SALE-107",
+    customerName: "Kaloi Mamu Khastilla - Dharmanagar",
+    customerPhone: "01655667788",
+    customerCode: "1007",
+    items: [{ type: "Special Ribs & Chops", weightKg: 10, ratePerKg: 650, amount: 6500 }],
+    totalAmount: 6500,
+    paymentMethod: "Due",
+    date: "2026-05-19T18:15:00Z",
+    amountPaid: 0,
+    amountDue: 6500,
+    dueDate: "2026-05-26",
+    installments: []
+  },
+  {
+    id: "SALE-108",
+    customerName: "Fakru Mama Mangalkhali Borobari Near Masjid",
+    customerPhone: "01733445566",
+    customerCode: "1008",
+    items: [{ type: "Beef Soup Bones & Fat", weightKg: 1.8, ratePerKg: 250, amount: 450 }],
+    totalAmount: 450,
+    paymentMethod: "Due",
+    date: "2026-05-18T10:30:00Z",
+    amountPaid: 0,
+    amountDue: 450,
+    dueDate: "2026-05-25",
+    installments: []
+  },
+  {
+    id: "SALE-109",
+    customerName: "Motin Bhai - Fakrul Bhai's Brother",
+    customerPhone: "01855667799",
+    customerCode: "1009",
+    items: [{ type: "Prime Ribeye & Round", weightKg: 4, ratePerKg: 500, amount: 2000 }],
+    totalAmount: 2000,
+    paymentMethod: "Due",
+    date: "2026-05-17T11:20:00Z",
+    amountPaid: 400,
+    amountDue: 1600,
+    dueDate: "2026-05-24",
+    installments: [
+      { id: "INST-109", date: "2026-05-17", amount: 400, paymentMethod: "Cash", notes: "Cash advance" }
+    ]
+  },
+  {
+    id: "SALE-110",
+    customerName: "Niyaz -Mangalkhali Monaf",
+    customerPhone: "01522334455",
+    customerCode: "1010",
+    items: [{ type: "Goat Tenderloin Pack", weightKg: 1.0, ratePerKg: 1000, amount: 1000 }],
+    totalAmount: 1000,
+    paymentMethod: "Due",
+    date: "2026-05-17T16:40:00Z",
+    amountPaid: 0,
+    amountDue: 1000,
+    dueDate: "2026-05-24",
+    installments: []
+  },
+  {
+    id: "SALE-111",
+    customerName: "Jakir Bhai Khas Tilla",
+    customerPhone: "01988776655",
+    customerCode: "1011",
+    items: [{ type: "Assorted Tripe & Organs", weightKg: 1.7, ratePerKg: 300, amount: 510 }],
+    totalAmount: 510,
+    paymentMethod: "Due",
+    date: "2026-05-17T13:45:00Z",
+    amountPaid: 0,
+    amountDue: 510,
+    dueDate: "2026-05-24",
+    installments: []
+  },
+  {
+    id: "SALE-112",
+    customerName: "Aklas Mama Eklatilla Jubarajnagar (Arifs Father)",
+    customerPhone: "01722338877",
+    customerCode: "1012",
+    items: [{ type: "Bazar Stallment Wholesale Halal", weightKg: 4.35, ratePerKg: 1000, amount: 4350 }],
+    totalAmount: 4350,
+    paymentMethod: "Due",
+    date: "2026-05-17T08:15:00Z",
+    amountPaid: 0,
+    amountDue: 4350,
+    dueDate: "2026-05-24",
+    installments: []
+  },
+  {
+    id: "SALE-113",
+    customerName: "Nural Islam",
+    customerPhone: "01811663322",
+    customerCode: "1013",
+    items: [{ type: "Restaurant Sourcing Order Bulk", weightKg: 59.7, ratePerKg: 1000, amount: 59700 }],
+    totalAmount: 59700,
+    paymentMethod: "Due",
+    date: "2026-05-15T10:00:00Z",
+    amountPaid: 0,
+    amountDue: 59700,
+    dueDate: "2026-05-22",
+    installments: []
   }
 ];
 
@@ -748,7 +477,91 @@ export function triggerCSVDownload<T>(
 
 export default function ShaieAlamDashboard() {
   const [lang, setLang] = useState<"en" | "bn">("en");
-  const [activeTab, setActiveTab] = useState<"dashboard" | "livestock" | "retail" | "investors" | "ai-assistant" | "butchers" | "cattle-feed">("dashboard");
+  const [activeTab, setActiveTab] = useState<"home" | "dashboard" | "livestock" | "retail" | "investors" | "ai-assistant" | "butchers" | "cattle-feed">("home");
+
+  // Screenshot specific navigation and dashboard modes
+  const [homeSubView, setHomeSubView] = useState<"widgets" | "dashboard">("widgets");
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  
+  // Dynamic user-customized tasks list matching "Upcoming Tasks" in the screenshots
+  const [upcomingTasks, setUpcomingTasks] = useState<Array<{ id: string; name: string; date: string; category: string }>>([]);
+  const [newTaskName, setNewTaskName] = useState("");
+  const [newTaskCategory, setNewTaskCategory] = useState("Livestock & Health");
+
+  const [collapsedAccordions, setCollapsedAccordions] = useState({
+    financial: false, // Financial Overview is EXPANDED by default as shown in the mockup
+    livestock: true,
+    production: true,
+    inventory: true,
+    alerts: true,
+  });
+
+  // States for interactive sub-dashboard forms and dynamic tables
+  const [breedingLogs, setBreedingLogs] = useState<Array<{ id: string; animalId: string; bullId: string; serviceDate: string; expectedDate: string; status: string; notes: string }>>([
+    { id: "B-1", animalId: "ANI-001", bullId: "BULL-99", serviceDate: "2026-02-10", expectedDate: "2026-11-15", status: "Active Gestation", notes: "First trimester ultrasound verified." },
+    { id: "B-2", animalId: "ANI-003", bullId: "BULL-32", serviceDate: "2026-03-05", expectedDate: "2026-12-10", status: "Active Gestation", notes: "Normal fetal growth observed." }
+  ]);
+  const [milkLogs, setMilkLogs] = useState<Array<{ id: string; date: string; animalId: string; liters: number; ratePerLiter: number; totalAmount: number }>>([
+    { id: "M-1", date: "2026-05-23", animalId: "ANI-001", liters: 15, ratePerLiter: 80, totalAmount: 1200 },
+    { id: "M-2", date: "2026-05-24", animalId: "ANI-002", liters: 18, ratePerLiter: 82, totalAmount: 1476 }
+  ]);
+  const [customAlerts, setCustomAlerts] = useState<Array<{ id: string; subject: string; details: string; urgency: "Low" | "Medium" | "High"; department: string; date: string }>>([
+    { id: "A-1", subject: "Humid Temperature Alert", details: "Protect animals from extreme moisture build-up in grazing fields. Ensure fans are active inside cowsheds.", urgency: "High", department: "Livestock Management", date: "2026-05-24" },
+    { id: "A-2", subject: "Gabtoli Sourcing Index Alert", details: "Local cattle bazar prices remain average for prime cattle breeds today.", urgency: "Medium", department: "Department Owner / Investors", date: "2026-05-24" }
+  ]);
+
+  // Section-specific form open/close toggles
+  const [showFinForm, setShowFinForm] = useState(false);
+  const [showLiveForm, setShowLiveForm] = useState(false);
+  const [showMedForm, setShowMedForm] = useState(false);
+  const [showBreedForm, setShowBreedForm] = useState(false);
+  const [showDairyForm, setShowDairyForm] = useState(false);
+  const [showFeedForm, setShowFeedForm] = useState(false);
+  const [showAlertForm, setShowAlertForm] = useState(false);
+
+  // Home Section Form Input States
+  // 1. Financial Overview Form Inputs
+  const [finType, setFinType] = useState<"Income" | "Expense">("Income");
+  const [finAmount, setFinAmount] = useState("");
+  const [finCategory, setFinCategory] = useState("Sales Revenue");
+  const [finDescription, setFinDescription] = useState("");
+
+  // 2. Livestock / Animal Inputs
+  const [liveType, setLiveType] = useState<"Cow" | "Goat" | "Buffalo" | "Sheep" | "Mithun">("Cow");
+  const [liveBreed, setLiveBreed] = useState("");
+  const [liveWeight, setLiveWeight] = useState("");
+  const [livePrice, setLivePrice] = useState("");
+  const [liveOwner, setLiveOwner] = useState("Farm Central");
+
+  // 2B. Medical Inputs
+  const [medAnimalId, setMedAnimalId] = useState("");
+  const [medType, setMedType] = useState("");
+  const [medCost, setMedCost] = useState("");
+  const [medCondition, setMedCondition] = useState("Good");
+
+  // 3. Breeding Inputs
+  const [breedAnimalId, setBreedAnimalId] = useState("");
+  const [breedBullId, setBreedBullId] = useState("");
+  const [breedServiceDate, setBreedServiceDate] = useState("");
+  const [breedNotes, setBreedNotes] = useState("");
+
+  // 3B. Daily Dairy Inputs
+  const [dairyAnimalId, setDairyAnimalId] = useState("");
+  const [dairyLiters, setDairyLiters] = useState("");
+  const [dairyRate, setDairyRate] = useState("80");
+
+  // 4. Feed Inputs
+  const [feedItemId, setFeedItemId] = useState("");
+  const [feedOperation, setFeedOperation] = useState<"Deposit" | "Disburse">("Deposit");
+  const [feedSacksChange, setFeedSacksChange] = useState("");
+
+  // 5. External Custom Alert Inputs
+  const [alertFormSubject, setAlertFormSubject] = useState("");
+  const [alertFormDetails, setAlertFormDetails] = useState("");
+  const [alertFormUrgency, setAlertFormUrgency] = useState<"Low" | "Medium" | "High">("Medium");
+  const [alertFormDept, setAlertFormDept] = useState("All Hands");
 
   // User Authentication State
   const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
@@ -1080,6 +893,9 @@ export default function ShaieAlamDashboard() {
     const saved = localStorage.getItem("mf_cached_queue");
     return saved ? JSON.parse(saved) : [];
   });
+  const [syncProgressIndex, setSyncProgressIndex] = useState<number>(-1);
+  const [syncItemProgress, setSyncItemProgress] = useState<number>(0);
+  const [prevCachedQueue, setPrevCachedQueue] = useState<string[]>([]);
 
   const effectiveOnline = isOnline && !simulateOffline;
 
@@ -1854,18 +1670,50 @@ export default function ShaieAlamDashboard() {
     
     setSyncStatus("Offline - Syncing");
     
-    // Simulate cloud synchronization with API endpoints & queue processing
-    setTimeout(() => {
-      setCachedQueue([]);
-      setAnimals(prev => prev.map(a => ({ ...a, isCached: false })));
-      setSales(prev => prev.map(s => ({ ...s, isCached: false })));
-      setSyncStatus("Sync Complete");
-      
+    const queueLength = cachedQueue.length;
+    if (queueLength === 0) {
+      setSyncProgressIndex(-1);
+      setSyncItemProgress(0);
       setTimeout(() => {
-        setSyncStatus("Online");
-      }, 2500);
-      
-    }, 2000);
+        setSyncStatus("Sync Complete");
+        setTimeout(() => {
+          setSyncStatus("Online");
+        }, 1500);
+      }, 800);
+      return;
+    }
+
+    // Keep a copy of cachedQueue for UI presentation even if we empty it at the end
+    setPrevCachedQueue([...cachedQueue]);
+    setSyncProgressIndex(0);
+    setSyncItemProgress(0);
+
+    let currentIndex = 0;
+    let currentProgress = 0;
+
+    const interval = setInterval(() => {
+      currentProgress += 25;
+      if (currentProgress > 100) {
+        currentProgress = 0;
+        currentIndex += 1;
+        if (currentIndex >= queueLength) {
+          clearInterval(interval);
+          setCachedQueue([]);
+          setAnimals(prev => prev.map(a => ({ ...a, isCached: false })));
+          setSales(prev => prev.map(s => ({ ...s, isCached: false })));
+          setSyncStatus("Sync Complete");
+          setSyncProgressIndex(-1);
+          setSyncItemProgress(0);
+          
+          setTimeout(() => {
+            setSyncStatus("Online");
+          }, 2000);
+          return;
+        }
+      }
+      setSyncProgressIndex(currentIndex);
+      setSyncItemProgress(currentProgress);
+    }, 200);
   };
 
   // Sync state to localstorage
@@ -1961,6 +1809,59 @@ export default function ShaieAlamDashboard() {
   const [bazarName, setBazarName] = useState<string>("");
   const [bazarReceiptImage, setBazarReceiptImage] = useState<string>("");
 
+  // Investment Calculator States
+  const [showInvestmentCalcModal, setShowInvestmentCalcModal] = useState(false);
+  const [calcAnimalType, setCalcAnimalType] = useState<string>("Cow");
+  const [calcInitialWeight, setCalcInitialWeight] = useState<number>(250);
+  const [calcPurchasePrice, setCalcPurchasePrice] = useState<number>(65000);
+  const [calcGrowthWeeks, setCalcGrowthWeeks] = useState<number>(24);
+  const [calcDailyWeightGain, setCalcDailyWeightGain] = useState<number>(0.8);
+  const [calcDailyFeedCost, setCalcDailyFeedCost] = useState<number>(150);
+  const [calcMedicineCost, setCalcMedicineCost] = useState<number>(2500);
+  const [calcOtherCosts, setCalcOtherCosts] = useState<number>(1500);
+  const [calcDressingPercent, setCalcDressingPercent] = useState<number>(52);
+  const [calcProjectedMeatPrice, setCalcProjectedMeatPrice] = useState<number>(650);
+  const [calcProjectedByproducts, setCalcProjectedByproducts] = useState<number>(4500);
+
+  const openInvestmentCalculator = (type?: string, weight?: number, price?: number) => {
+    if (type) setCalcAnimalType(type);
+    if (weight) setCalcInitialWeight(weight);
+    if (price) setCalcPurchasePrice(price);
+    
+    // Set smart defaults based on animal type if customized
+    const animalLower = (type || "Cow").toLowerCase();
+    if (animalLower.includes("goat") || animalLower.includes("sheep")) {
+      setCalcInitialWeight(weight || 25);
+      setCalcPurchasePrice(price || 8500);
+      setCalcDailyWeightGain(0.15);
+      setCalcDailyFeedCost(25);
+      setCalcMedicineCost(800);
+      setCalcOtherCosts(500);
+      setCalcDressingPercent(48);
+      setCalcProjectedMeatPrice(750);
+      setCalcProjectedByproducts(850);
+    } else if (animalLower.includes("buffalo") || animalLower.includes("mithun")) {
+      setCalcInitialWeight(weight || 320);
+      setCalcPurchasePrice(price || 85000);
+      setCalcDailyWeightGain(0.9);
+      setCalcDailyFeedCost(180);
+      setCalcMedicineCost(3500);
+      setCalcOtherCosts(2500);
+      setCalcDressingPercent(50);
+      setCalcProjectedByproducts(6500);
+    } else { // Cow / standard
+      setCalcInitialWeight(weight || 220);
+      setCalcPurchasePrice(price || 55000);
+      setCalcDailyWeightGain(0.75);
+      setCalcDailyFeedCost(140);
+      setCalcMedicineCost(2500);
+      setCalcOtherCosts(1800);
+      setCalcDressingPercent(52);
+      setCalcProjectedByproducts(4500);
+    }
+    setShowInvestmentCalcModal(true);
+  };
+
   const handleCompressAndSetImage = (file: File, setter: (val: string) => void) => {
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -2002,6 +1903,10 @@ export default function ShaieAlamDashboard() {
 
   // Batch Slicing & Processing state
   const [selectedAnimalIds, setSelectedAnimalIds] = useState<string[]>([]);
+  const [bulkHealthCondition, setBulkHealthCondition] = useState("");
+  const [bulkHealthConditionCustom, setBulkHealthConditionCustom] = useState("");
+  const [bulkOwner, setBulkOwner] = useState("");
+  const [bulkOwnerCustom, setBulkOwnerCustom] = useState("");
   const [showBatchProcessModal, setShowBatchProcessModal] = useState(false);
   const [batchYieldRatio, setBatchYieldRatio] = useState<number>(0.52);
 
@@ -2138,6 +2043,19 @@ export default function ShaieAlamDashboard() {
   const [customAmountPaid, setCustomAmountPaid] = useState<number | "">("");
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
   const [selectedTrackerCode, setSelectedTrackerCode] = useState<string>("");
+  const [showGaveForm, setShowGaveForm] = useState(false);
+  const [showGotForm, setShowGotForm] = useState(false);
+  const [gaveAmount, setGaveAmount] = useState("");
+  const [gaveDescription, setGaveDescription] = useState("");
+  const [gaveDate, setGaveDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [gotAmount, setGotAmount] = useState("");
+  const [gotDescription, setGotDescription] = useState("");
+  const [gotDate, setGotDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [gotPaymentMethod, setGotPaymentMethod] = useState<"Cash" | "bKash" | "Card">("Cash");
+  const [showReminderOptionsId, setShowReminderOptionsId] = useState<string | null>(null);
+  const [showCashbookModal, setShowCashbookModal] = useState(false);
+  const [dateReminderSettingId, setDateReminderSettingId] = useState<string | null>(null);
+  const [reminderSelectedDate, setReminderSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [scannerActive, setScannerActive] = useState(false);
   const [scannerStatusMsg, setScannerStatusMsg] = useState<string | null>(null);
@@ -2819,6 +2737,50 @@ export default function ShaieAlamDashboard() {
     if (!effectiveOnline) {
       recordOfflineChange(`Updated details for Animal ${editingAnimal.id}`);
     }
+  };
+
+  // Bulk edit multiple selected animals
+  const handleBulkUpdate = () => {
+    if (selectedAnimalIds.length === 0) {
+      alert("No animals selected for bulk update.");
+      return;
+    }
+
+    const finalHealth = (bulkHealthConditionCustom.trim() || bulkHealthCondition) || "";
+    const finalOwner = (bulkOwnerCustom.trim() || bulkOwner) || "";
+
+    if (!finalHealth && !finalOwner) {
+      alert("Please select or enter either a Health Condition or Owner/Supplier to bulk update.");
+      return;
+    }
+
+    setAnimals(prev => prev.map(a => {
+      if (selectedAnimalIds.includes(a.id) && a.status !== "Processed") {
+        return {
+          ...a,
+          healthCondition: finalHealth ? finalHealth : a.healthCondition,
+          owner: finalOwner ? finalOwner : a.owner
+        };
+      }
+      return a;
+    }));
+
+    // Record changes
+    let descLog = `Bulk edited ${selectedAnimalIds.length} animals: ${selectedAnimalIds.join(", ")}.`;
+    if (finalHealth) descLog += ` Health condition set to '${finalHealth}'.`;
+    if (finalOwner) descLog += ` Owner set to '${finalOwner}'.`;
+    
+    if (!effectiveOnline) {
+      recordOfflineChange(descLog);
+    }
+
+    // Reset inputs & selection
+    setBulkHealthCondition("");
+    setBulkHealthConditionCustom("");
+    setBulkOwner("");
+    setBulkOwnerCustom("");
+    setSelectedAnimalIds([]);
+    alert(`Successfully updated attributes for the selected ${selectedAnimalIds.length} animals.`);
   };
 
   // Process selected animals in batch
@@ -3912,10 +3874,13 @@ _Empowered by ShaieAlam ERP Systems_`;
   }
 
   return (
-    <div className="min-h-screen bg-[#070d1e] text-slate-100 flex flex-col selection:bg-teal-500 selection:text-slate-900 antialiased font-sans">
+    <div className={`min-h-screen flex flex-col selection:bg-teal-500 selection:text-slate-900 antialiased font-sans transition-colors duration-300 ${
+      activeTab === "home" ? "bg-[#f4f6fa] text-slate-800" : "bg-[#070d1e] text-slate-100"
+    }`}>
       
       {/* Upper Navigation Bar */}
-      <header className="border-b border-slate-800/60 bg-slate-950/65 backdrop-blur-md sticky top-0 z-40 px-6 py-3.5 shadow-lg shadow-black/20">
+      {activeTab !== "home" && (
+        <header className="border-b border-slate-800/60 bg-slate-950/65 backdrop-blur-md sticky top-0 z-40 px-6 py-3.5 shadow-lg shadow-black/20">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           
           <div className="flex items-center gap-3">
@@ -4055,21 +4020,78 @@ _Empowered by ShaieAlam ERP Systems_`;
                       <div className="flex items-center justify-between text-xs font-mono">
                         <span className="text-slate-400">{activeTrans.cachedCountLabel}:</span>
                         <span className="bg-slate-800 px-2 py-0.5 rounded-md font-bold text-teal-400">
-                          {cachedQueue.length}
+                          {syncStatus === "Offline - Syncing" ? prevCachedQueue.length : cachedQueue.length}
                         </span>
                       </div>
                       
-                      {cachedQueue.length > 0 ? (
-                        <div className="bg-slate-900 border border-slate-800/80 rounded-xl p-2.5 max-h-24 overflow-y-auto space-y-1.5 font-mono text-[9px] text-slate-400">
-                          <p className="text-[8px] uppercase text-stone-500 font-black border-b border-slate-850 pb-1">
-                            {activeTrans.cachedListTitle}
+                      {((syncStatus === "Offline - Syncing" ? prevCachedQueue : cachedQueue).length > 0) ? (
+                        <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-3 max-h-56 overflow-y-auto space-y-2 font-mono text-[10px] text-slate-300">
+                          <p className="text-[9px] uppercase text-stone-400 font-extrabold border-b border-slate-850 pb-1.5 flex justify-between items-center select-none">
+                            <span>{syncStatus === "Offline - Syncing" ? "Syncing Sequence" : activeTrans.cachedListTitle}</span>
+                            {syncStatus === "Offline - Syncing" && (
+                              <span className="text-amber-400 animate-pulse font-mono font-black">
+                                {Math.round((Math.max(0, syncProgressIndex) / prevCachedQueue.length) * 100)}%
+                              </span>
+                            )}
                           </p>
-                          {cachedQueue.map((item, index) => (
-                            <div key={index} className="flex gap-1.5 leading-snug">
-                              <span className="text-teal-400 font-bold shrink-0">[{index + 1}]</span>
-                              <span>{item}</span>
-                            </div>
-                          ))}
+                          {(syncStatus === "Offline - Syncing" ? prevCachedQueue : cachedQueue).map((item, index) => {
+                            const isSyncing = syncStatus === "Offline - Syncing";
+                            const isDone = isSyncing && index < syncProgressIndex;
+                            const isActive = isSyncing && index === syncProgressIndex;
+                            const isPending = isSyncing && index > syncProgressIndex;
+
+                            return (
+                              <div 
+                                key={index} 
+                                className={`rounded-xl p-2 border transition-all duration-300 leading-normal flex flex-col gap-1.5 ${
+                                  isActive 
+                                    ? "bg-amber-500/10 border-amber-500/30 text-amber-200 shadow-md shadow-amber-500/5" 
+                                    : isDone 
+                                    ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400 opacity-90"
+                                    : "bg-slate-950/40 border-slate-900/60 text-slate-400"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={isActive ? "text-amber-400 font-black animate-bounce" : isDone ? "text-emerald-400" : "text-slate-500"}>
+                                      {isDone ? "✓" : `#${index + 1}`}
+                                    </span>
+                                    <span className={isDone ? "line-through text-slate-500" : ""}>
+                                      {item.length > 20 ? item.substring(0, 20) + "..." : item}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    {isActive ? (
+                                      <span className="text-amber-400 flex items-center gap-1 font-mono font-bold animate-pulse">
+                                        SYNCING ({syncItemProgress}%)
+                                      </span>
+                                    ) : isDone ? (
+                                      <span className="text-emerald-400 font-bold">
+                                        FINISHED
+                                      </span>
+                                    ) : isPending ? (
+                                      <span className="text-slate-500 font-medium">
+                                        QUEUED
+                                      </span>
+                                    ) : (
+                                      <span className="text-teal-400 font-semibold text-[8px] bg-teal-500/10 px-1 py-0.2 rounded border border-teal-500/20">
+                                        LOCAL
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {isActive && (
+                                  <div className="w-full bg-slate-950/60 h-1.5 rounded-full overflow-hidden border border-slate-850">
+                                    <div 
+                                      className="bg-amber-500 h-full transition-all duration-150 rounded-full"
+                                      style={{ width: `${syncItemProgress}%` }}
+                                    ></div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       ) : (
                         <p className="text-[10px] text-slate-500 italic text-center py-2">
@@ -4131,15 +4153,18 @@ _Empowered by ShaieAlam ERP Systems_`;
               <span className="font-semibold sm:hidden">{lang === 'en' ? 'BN' : 'EN'}</span>
             </button>
           </div>
-
         </div>
       </header>
+      )}
 
       {/* Main Container Layout */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-6 py-4 md:py-6 flex flex-col gap-4 md:gap-6">
+      <main className={`flex-1 w-full mx-auto flex flex-col transition-all duration-300 ${
+        activeTab === "home" ? "max-w-2xl px-0 pt-0 pb-36 gap-0" : "max-w-7xl px-4 md:px-6 py-4 md:py-6 gap-4 md:gap-6"
+      }`}>
         
         {/* Navigation Tabs Bar */}
-        <div className="border border-slate-800 bg-slate-950/65 backdrop-blur-md p-1 rounded-xl flex overflow-x-auto whitespace-nowrap scrollbar-none gap-1 shadow-lg shadow-black/30">
+        {activeTab !== "home" && (
+          <div className="border border-slate-800 bg-slate-950/65 backdrop-blur-md p-1 rounded-xl flex overflow-x-auto whitespace-nowrap scrollbar-none gap-1 shadow-lg shadow-black/30">
           {[
             { id: "dashboard", label: activeTrans.dashboard, icon: Activity },
             { id: "livestock", label: activeTrans.livestock, icon: Layers },
@@ -4170,9 +4195,10 @@ _Empowered by ShaieAlam ERP Systems_`;
             );
           })}
         </div>
+        )}
 
         {/* Offline Banner & Sync Controller */}
-        {(!effectiveOnline || cachedQueue.length > 0) && (
+        {activeTab !== "home" && (!effectiveOnline || cachedQueue.length > 0) && (
           <div className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg ${
             syncStatus === "Offline - Syncing"
               ? "bg-amber-950/20 border-amber-800/60 text-amber-300 animate-pulse"
@@ -4211,15 +4237,36 @@ _Empowered by ShaieAlam ERP Systems_`;
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-slate-400 mt-1 leading-normal font-sans">
+                <div className="text-xs text-slate-400 mt-1.5 leading-normal font-sans">
                   {syncStatus === "Offline - Syncing" ? (
-                    "Establishing handshake protocol and pushing ledger revisions to cloud nodes safely..."
+                    <div className="space-y-2">
+                      <p className="text-amber-200 font-semibold flex items-center gap-1.5">
+                        <span className="inline-block h-1.5 w-1.5 bg-amber-400 rounded-full animate-ping"></span>
+                        Synchronizing item {syncProgressIndex + 1} of {prevCachedQueue.length}:{" "}
+                        <span className="text-[11px] font-mono text-white tracking-wide bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                          {prevCachedQueue[syncProgressIndex] || "Finishing handshake..."}
+                        </span>
+                      </p>
+                      <div className="flex items-center gap-3 w-80 max-w-full">
+                        <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-slate-800">
+                          <div 
+                            className="bg-gradient-to-r from-amber-500 to-teal-400 h-full transition-all duration-150 rounded-full"
+                            style={{ 
+                              width: `${Math.round(((syncProgressIndex * 100 + syncItemProgress) / (prevCachedQueue.length * 100)) * 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-[10px] font-mono shrink-0 text-amber-300 font-black">
+                          {Math.round(((syncProgressIndex * 100 + syncItemProgress) / (prevCachedQueue.length * 100)) * 100)}%
+                        </span>
+                      </div>
+                    </div>
                   ) : cachedQueue.length > 0 ? (
-                    "All data edits, invoices, and sales processed are locked in secure localStorage and queued for final settlement transfer."
+                    <p>All data edits, invoices, and sales processed are locked in secure localStorage and queued for final settlement transfer.</p>
                   ) : (
-                    "You are currently disconnected from internet, but can safely create sales, manage sheep/cattle weights, and print bills."
+                    <p>You are currently disconnected from internet, but can safely create sales, manage sheep/cattle weights, and print bills.</p>
                   )}
-                </p>
+                </div>
               </div>
             </div>
             {effectiveOnline && cachedQueue.length > 0 && (
@@ -4232,6 +4279,1490 @@ _Empowered by ShaieAlam ERP Systems_`;
                 SYNC NOW ({cachedQueue.length} changes)
               </button>
             )}
+          </div>
+        )}
+
+        {/* TAB: PREMIUM SCREENSHOT REPLICA (HOME VIEW) */}
+        {activeTab === "home" && (
+          <div className="flex flex-col bg-[#f4f6fa] text-slate-800 animate-fadeIn min-h-screen relative shadow-[0_0_50px_rgba(0,0,0,0.06)] overflow-hidden">
+            
+            {/* Custom Screenshot-Perfect Header */}
+            <header className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+              <div className="flex items-center gap-3">
+                {/* Custom stylized Chicken logo matching the brand in the mockup */}
+                <div className="h-10 w-10 bg-gradient-to-tr from-amber-100/60 to-amber-200/50 rounded-full flex items-center justify-center border border-amber-200/40 shadow-xs">
+                  <svg width="24" height="24" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="transform -scale-x-102">
+                    <path d="M14 36c0-10 8-18 18-18s18 8 18 18c0 4-4 8-8 10" stroke="#f59e0b" strokeWidth="4.5" strokeLinecap="round"/>
+                    <path d="M42 22c2-2 5-2 7 0s2 5 0 7l-5 2" stroke="#ef4444" strokeWidth="3" strokeLinejoin="round"/>
+                    <path d="M26 12c2-4 5-4 7-1" stroke="#ef4444" strokeWidth="3" strokeLinecap="round"/>
+                    <circle cx="34" cy="24" r="3" fill="#1e293b"/>
+                    <path d="M14 34c0 10 8 18 18 18s18-8 18-18" fill="#ffffff" stroke="#e2e8f0" strokeWidth="3.5"/>
+                    <path d="M32 52v8m-4 0h8" stroke="#64748b" strokeWidth="3.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <span className="text-lg font-black font-sans text-slate-800 tracking-tight">ShaieAlam'sFarm</span>
+              </div>
+              
+              {/* Notification / Tasks link on top right */}
+              <button 
+                onClick={() => {
+                  setHomeSubView("dashboard");
+                  setCollapsedAccordions(prev => ({ ...prev, alerts: false }));
+                }}
+                className="flex items-center gap-1.5 text-[#f59e0b] hover:text-amber-600 font-extrabold text-sm transition focus:outline-none cursor-pointer select-none"
+              >
+                <span>Tasks</span>
+                <div className="relative">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-[22px] w-[22px] text-[#f59e0b]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.07 6.07 0 00-3.578-5.559V5a1.5 1.5 0 10-3 0v1.441A6.07 6.07 0 008 11v3c0 .825-.333 1.6-1.405 1.742" />
+                    <path strokeLinejoin="round" d="M12 21a2 2 0 002-2H10a2 2 0 002 2z" />
+                  </svg>
+                  <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border-2 border-white shadow-xs">
+                    19
+                  </span>
+                </div>
+              </button>
+            </header>
+
+            {/* Selector bar under header */}
+            <div className="max-w-md mx-auto w-full px-5 mt-5">
+              <div className="flex items-center justify-between mb-4">
+                
+                {/* Edit Widgets Toggle Button */}
+                <button 
+                  onClick={() => {
+                    setIsScheduleModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200/90 hover:border-slate-350 hover:bg-slate-50 text-[11px] font-bold text-slate-600 rounded-xl shadow-xs transition"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                  </svg>
+                  <span>Edit Widgets</span>
+                </button>
+                
+                {/* Selector switch */}
+                <div className="bg-white border border-slate-200/85 rounded-xl p-1 flex gap-0.5 shadow-xs">
+                  <button 
+                    onClick={() => setHomeSubView("widgets")}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-black transition duration-200 ${
+                      homeSubView === "widgets" 
+                        ? "bg-[#fbbf24] text-white shadow-xs font-black" 
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    Widgets
+                  </button>
+                  <button 
+                    onClick={() => setHomeSubView("dashboard")}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-black transition duration-200 ${
+                      homeSubView === "dashboard" 
+                        ? "bg-[#fbbf24] text-white shadow-xs font-black" 
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    Dashboard
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* VIEW A: WIDGETS DISPLAY (Screenshot 1) */}
+            {homeSubView === "widgets" && (
+              <div className="max-w-md mx-auto w-full px-5 space-y-6 pb-20">
+                
+                {/* 2-Column Grid matching UI Layout exactly */}
+                <div className="grid grid-cols-2 gap-4">
+                  
+                  {/* WIDGET 1: Batches */}
+                  <button 
+                    onClick={() => setActiveTab("livestock")}
+                    className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col items-center justify-center text-center shadow-xs hover:shadow-md transition hover:scale-[1.01] duration-150 cursor-pointer"
+                  >
+                    <div className="h-14 w-14 bg-amber-50 rounded-2xl flex items-center justify-center mb-3 text-2xl shadow-inner border border-amber-100/20">
+                      🏡
+                    </div>
+                    <span className="text-xs font-black text-slate-700 tracking-tight">Batches</span>
+                  </button>
+
+                  {/* WIDGET 2: My Farm Shop */}
+                  <button 
+                    onClick={() => setActiveTab("retail")}
+                    className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col items-center justify-center text-center shadow-xs hover:shadow-md transition hover:scale-[1.01] duration-150 cursor-pointer"
+                  >
+                    <div className="h-14 w-14 bg-amber-100/30 rounded-2xl flex items-center justify-center mb-3 text-2xl shadow-inner border border-amber-100/10">
+                      🏪
+                    </div>
+                    <span className="text-xs font-black text-slate-700 tracking-tight">My Farm Shop</span>
+                  </button>
+
+                  {/* WIDGET 3: Finances */}
+                  <button 
+                    onClick={() => setActiveTab("investors")}
+                    className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col items-center justify-center text-center shadow-xs hover:shadow-md transition hover:scale-[1.01] duration-150 cursor-pointer"
+                  >
+                    <div className="h-14 w-14 bg-emerald-50 rounded-2xl flex items-center justify-center mb-3 text-2xl shadow-inner">
+                      💰
+                    </div>
+                    <span className="text-xs font-black text-slate-700 tracking-tight">Finances</span>
+                  </button>
+
+                  {/* WIDGET 4: Health Records */}
+                  <button 
+                    onClick={() => {
+                      setActiveTab("livestock");
+                      alert("Opening Livestock Ledger. Check individual animals profiles to inspect and edit veterinary vaccination/health histories.");
+                    }}
+                    className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col items-center justify-center text-center shadow-xs hover:shadow-md transition hover:scale-[1.01] duration-150 cursor-pointer"
+                  >
+                    <div className="h-14 w-14 bg-sky-50 rounded-2xl flex items-center justify-center mb-3 text-2xl shadow-inner">
+                      💉
+                    </div>
+                    <span className="text-xs font-black text-slate-700 tracking-tight">Health Records</span>
+                  </button>
+
+                  {/* WIDGET 5: Records */}
+                  <button 
+                    onClick={() => setActiveTab("retail")}
+                    className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col items-center justify-center text-center shadow-xs hover:shadow-md transition hover:scale-[1.01] duration-150 cursor-pointer"
+                  >
+                    <div className="h-14 w-14 bg-indigo-50 rounded-2xl flex items-center justify-center mb-3 text-2xl shadow-inner">
+                      📋
+                    </div>
+                    <span className="text-xs font-black text-slate-700 tracking-tight">Records</span>
+                  </button>
+
+                  {/* WIDGET 6: Schedules */}
+                  <button 
+                    onClick={() => setIsScheduleModalOpen(true)}
+                    className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col items-center justify-center text-center shadow-xs hover:shadow-md transition hover:scale-[1.01] duration-150 cursor-pointer"
+                  >
+                    <div className="h-14 w-14 bg-rose-50 rounded-2xl flex items-center justify-center mb-3 text-2xl shadow-inner">
+                      📅
+                    </div>
+                    <span className="text-xs font-black text-slate-700 tracking-tight">Schedules</span>
+                  </button>
+
+                  {/* WIDGET 7: Download Reports */}
+                  <button 
+                    onClick={() => {
+                      // Trigger functional CSV export report
+                      const columns = [
+                        { header: "Animal ID", accessor: (a: any) => a.id },
+                        { header: "Breed", accessor: (a: any) => a.breed },
+                        { header: "Type", accessor: (a: any) => a.type },
+                        { header: "Weight (KG)", accessor: (a: any) => a.weightKg || 150 },
+                        { header: "Purchase Price (₹)", accessor: (a: any) => a.purchasePrice },
+                        { header: "Owner / Dept", accessor: (a: any) => a.owner || "Farm Central" }
+                      ];
+                      triggerCSVDownload(animals, columns, "ShaieAlam_Farm_Ledger_Report.csv");
+                    }}
+                    className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col items-center justify-center text-center shadow-xs hover:shadow-md transition hover:scale-[1.01] duration-150 cursor-pointer col-span-2"
+                  >
+                    <div className="h-14 w-14 bg-amber-50 rounded-2xl flex items-center justify-center mb-3 text-2xl shadow-inner border border-amber-150">
+                      📊
+                    </div>
+                    <span className="text-xs font-black text-slate-700 tracking-tight">Download Reports</span>
+                  </button>
+                </div>
+
+                {/* Upcoming Tasks Section (Mockup Matching) */}
+                <div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-xs">
+                  <div className="flex items-center justify-between pb-3.5 border-b border-gray-100">
+                    <span className="text-sm font-black text-slate-800">Upcoming Tasks</span>
+                    <button 
+                      onClick={() => setIsScheduleModalOpen(true)}
+                      className="text-xs font-black text-[#fbbf24] flex items-center hover:text-amber-600 transition"
+                    >
+                      View All &gt;
+                    </button>
+                  </div>
+                  
+                  <div className="py-6 flex flex-col items-center justify-center text-center">
+                    {upcomingTasks.length === 0 ? (
+                      <>
+                        <p className="text-xs text-slate-400 font-medium">All clear here. For now.</p>
+                        <button 
+                          onClick={() => setIsScheduleModalOpen(true)}
+                          className="mt-4 px-6 py-2.5 border border-[#fbbf24]/50 hover:bg-amber-50/20 text-[#fbbf24] text-xs font-black rounded-xl transition duration-150 cursor-pointer shadow-xs"
+                        >
+                          Schedule Tasks
+                        </button>
+                      </>
+                    ) : (
+                      <div className="w-full text-left space-y-2.5">
+                        {upcomingTasks.map(task => (
+                          <div key={task.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200/40 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🎯</span>
+                              <div>
+                                <p className="font-extrabold text-slate-800">{task.name}</p>
+                                <p className="text-[10px] text-slate-500">{task.category}</p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-600 bg-white border border-slate-200/80 px-2 py-0.5 rounded-lg shadow-2xs">{task.date}</span>
+                          </div>
+                        ))}
+                        <button 
+                          onClick={() => setIsScheduleModalOpen(true)}
+                          className="w-full text-center py-2.5 mt-2 text-xs font-bold text-slate-500 bg-slate-50 border border-dashed border-slate-200 hover:bg-slate-100 rounded-xl transition"
+                        >
+                          + Add Custom Task
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* VIEW B: DASHBOARD VIEW (Screenshot 2) */}
+            {homeSubView === "dashboard" && (
+              <div className="max-w-md mx-auto w-full px-5 space-y-5 pb-20">
+                
+                {/* Success Banner */}
+                <div className="bg-emerald-50/80 border-2 border-emerald-500/35 p-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-2xs select-none">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0 shadow-xs">
+                      <Check className="h-5 w-5 stroke-[3]" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-emerald-950 leading-tight">All systems running smoothly</p>
+                      <p className="text-[10px] text-emerald-600 mt-0.5">There are no critical alerts for your farm at this time.</p>
+                    </div>
+                  </div>
+                  <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0 hidden sm:block" />
+                </div>
+
+                <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mt-4">Status at a Glance</h3>
+
+                {/* ACCORDION 1: Financial Overview (Expanded by default) */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs">
+                  <button 
+                    onClick={() => setCollapsedAccordions(prev => ({ ...prev, financial: !prev.financial }))}
+                    className="w-full px-4 py-3.5 flex items-center justify-between border-b border-slate-100 hover:bg-slate-50 transition text-left"
+                  >
+                    <span className="text-xs font-black text-[#f59e0b] flex items-center gap-2 tracking-wide uppercase">
+                      💵 Financial Overview
+                    </span>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className={`h-4 w-4 text-slate-400 transform transition-transform duration-200 ${!collapsedAccordions.financial ? 'rotate-180' : ''}`} 
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {!collapsedAccordions.financial && (
+                    <div className="p-4 bg-slate-50/40 space-y-4">
+                      <div className="grid grid-cols-2 gap-3.5">
+                        
+                        {/* Metric 1: Net Profit (30d) representing user values */}
+                        <div className="bg-white border border-slate-200/60 rounded-xl p-3 shadow-xs flex flex-col justify-between">
+                          <span className="text-[9px] text-slate-400 font-mono uppercase tracking-wider font-extrabold">Net Profit (30d)</span>
+                          <span className="text-base font-black text-emerald-500 font-mono mt-1">+₹{(cashBalance > 128400 ? (cashBalance - 128400) : 0).toLocaleString()}</span>
+                          <div className="mt-2 text-[9px] text-slate-500">Wallet reserves stable</div>
+                        </div>
+
+                        {/* Metric 2: Financial Health */}
+                        <div className="bg-white border border-slate-200/60 rounded-xl p-3 shadow-xs flex flex-col justify-between">
+                          <span className="text-[9px] text-slate-400 font-mono uppercase tracking-wider font-extrabold">Financial Health</span>
+                          <span className="text-xs font-black text-[#fbbf24] mt-1 uppercase tracking-widest">{cashBalance > 100005 ? "Healthy" : "N/A"}</span>
+                          <div className="mt-2 text-[9px] text-slate-500">Central capital ready</div>
+                        </div>
+
+                        {/* Metric 3: Today's Tasks */}
+                        <div className="bg-white border border-slate-200/60 rounded-xl p-3 shadow-xs flex flex-col justify-between">
+                          <span className="text-[9px] text-slate-400 font-mono uppercase tracking-wider font-extrabold">Today's Tasks</span>
+                          <span className="text-base font-black text-slate-700 font-mono mt-1">{upcomingTasks.length}</span>
+                          <div className="mt-2 text-[9px] text-slate-500">Pending events</div>
+                        </div>
+
+                        {/* Metric 4: Income (30d) values fetched from sales list! */}
+                        <div className="bg-white border border-slate-200/60 rounded-xl p-3 shadow-xs flex flex-col justify-between">
+                          <span className="text-[9px] text-slate-400 font-mono uppercase tracking-wider font-extrabold">Income (30d)</span>
+                          <span className="text-base font-black text-slate-700 font-mono mt-1">₹{sales.reduce((acc, s) => acc + s.grandTotal, 0).toLocaleString()}</span>
+                          <div className="mt-2 text-[9px] text-emerald-500 font-black">↑ Live transactions</div>
+                        </div>
+
+                        {/* Metric 5: Expense (30d) values calculated from registered livestock */}
+                        <div className="bg-white border border-slate-200/60 rounded-xl p-3 shadow-xs flex flex-col justify-between col-span-2">
+                          <span className="text-[9px] text-slate-400 font-mono uppercase tracking-wider font-extrabold">Expense (30d)</span>
+                          <span className="text-base font-black text-slate-700 font-mono mt-1">₹{animals.reduce((acc, a) => acc + a.purchasePrice, 0).toLocaleString()}</span>
+                          <div className="mt-2 text-[9px] text-slate-500">Registered Sourcing Purchases Capital</div>
+                        </div>
+
+                      </div>
+
+                      {/* Interactive finance form toggle button */}
+                      <button 
+                        type="button"
+                        onClick={() => setShowFinForm(!showFinForm)}
+                        className="w-full py-2 bg-amber-500/10 hover:bg-[#fbbf24]/20 text-[#f59e0b] font-black text-xs rounded-xl transition flex items-center justify-center gap-1 cursor-pointer select-none"
+                      >
+                        {showFinForm ? "✕ Close Sourcing Form" : "➕ Record Capital Transaction / লেনদেন সংরক্ষণ"}
+                      </button>
+
+                      {/* Sourcing form */}
+                      {showFinForm && (
+                        <form 
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            const amt = Number(finAmount);
+                            if (!amt || amt <= 0) {
+                              alert("Please specify a valid monetary amount.");
+                              return;
+                            }
+                            if (finType === "Income") {
+                              setCashBalance(prev => prev + amt);
+                              const newSale = {
+                                id: `SAL-${Date.now()}`,
+                                customerName: "Farm Sourcing Buyer",
+                                customerPhone: "N/A",
+                                customerCode: "9999",
+                                items: [{ type: finCategory, weightKg: 0, ratePerKg: 0, amount: amt }],
+                                subtotal: amt,
+                                chargeWeight: 0,
+                                carryingCharge: 0,
+                                grandTotal: amt,
+                                date: new Date().toISOString().split("T")[0]
+                              };
+                              setSales(prev => [newSale, ...prev]);
+                            } else {
+                              setCashBalance(prev => Math.max(0, prev - amt));
+                            }
+                            recordOfflineChange(`Registered capital ${finType} of ₹${amt} under ${finCategory}`);
+                            alert(`Successfully processed ${finType} of ₹${amt.toLocaleString()}!`);
+                            setFinAmount("");
+                            setFinDescription("");
+                            setShowFinForm(false);
+                          }}
+                          className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-3.5 text-xs text-slate-705 animate-fadeIn"
+                        >
+                          <p className="font-extrabold text-slate-800">New Financial Sourcing Log / নতুন লেনদেন</p>
+                          
+                          <div className="flex gap-2">
+                            <button 
+                              type="button"
+                              onClick={() => setFinType("Income")}
+                              className={`flex-1 py-1.5 rounded-lg text-center font-bold text-xs border ${finType === "Income" ? "bg-emerald-50 border-emerald-500 text-emerald-600" : "bg-white border-slate-200 text-slate-600"}`}
+                            >
+                              Income
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={() => setFinType("Expense")}
+                              className={`flex-1 py-1.5 rounded-lg text-center font-bold text-xs border ${finType === "Expense" ? "bg-rose-50 border-rose-500 text-rose-600" : "bg-white border-slate-200 text-slate-600"}`}
+                            >
+                              Expense
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[10px] uppercase font-black font-mono text-slate-400 mb-1">Amount / পরিমাণ (₹)</label>
+                              <input 
+                                type="number" 
+                                required
+                                value={finAmount}
+                                onChange={(e) => setFinAmount(e.target.value)}
+                                placeholder="e.g. 1500" 
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-400 text-xs font-mono font-bold"
+                              />
+                            </div>
+                            
+                            <div>
+                              <label className="block text-[10px] uppercase font-black font-mono text-slate-400 mb-1">Category / খাত</label>
+                              <select 
+                                value={finCategory} 
+                                onChange={(e) => setFinCategory(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs"
+                              >
+                                <option value="Sales Revenue">Sales Revenue</option>
+                                <option value="Feed Sourcing">Feed Sourcing</option>
+                                <option value="Veterinary Medicines">Veterinary Medicines</option>
+                                <option value="Herdsmen Maintenance">Herdsmen Maintenance</option>
+                                <option value="Investor Capital Transfer">Investor Capital Transfer</option>
+                                <option value="Utility Outflow">Utility Outflow</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] uppercase font-black font-mono text-slate-400 mb-1">Memo Comments / বর্ণনা</label>
+                            <input 
+                              type="text" 
+                              value={finDescription}
+                              onChange={(e) => setFinDescription(e.target.value)}
+                              placeholder="Describe transaction context..." 
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none text-xs"
+                            />
+                          </div>
+
+                          <button 
+                            type="submit"
+                            className="w-full bg-[#fbbf24] hover:bg-amber-500 text-slate-900 font-black py-2 rounded-lg text-xs cursor-pointer select-none"
+                          >
+                            Save Transaction Log
+                          </button>
+                        </form>
+                      )}
+
+                    </div>
+                  )}
+                </div>
+
+                {/* ACCORDION 2: Livestock & Health (Collapsed by default) */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs">
+                  <button 
+                    onClick={() => setCollapsedAccordions(prev => ({ ...prev, livestock: !prev.livestock }))}
+                    className="w-full px-4 py-3.5 flex items-center justify-between border-b border-slate-100 hover:bg-slate-50 transition text-left"
+                  >
+                    <span className="text-xs font-extrabold text-slate-600 flex items-center gap-2 uppercase tracking-wide">
+                      🐾 Livestock & Health
+                    </span>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className={`h-4 w-4 text-slate-400 transform transition-transform duration-200 ${!collapsedAccordions.livestock ? 'rotate-180' : ''}`} 
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {!collapsedAccordions.livestock && (
+                    <div className="p-4 bg-slate-50/20 text-xs text-slate-600 space-y-4 font-sans text-left">
+                      <div className="space-y-1.5 border-b border-slate-200 pb-3">
+                        <div className="flex justify-between"><span>Live Herd heads:</span><b>{animals.filter(a => a.status !== "Processed").length} Units</b></div>
+                        <div className="flex justify-between"><span>Cattle Registered:</span><b>{animals.filter(a=> a.type==="Cow" || a.type==="Buffalo").length} Heads</b></div>
+                        <div className="flex justify-between"><span>Goat & Sheep Pen:</span><b>{animals.filter(a=> a.type==="Goat" || a.type==="Sheep").length} Heads</b></div>
+                      </div>
+
+                      {/* Form options toggles */}
+                      <div className="flex gap-2">
+                        <button 
+                          type="button"
+                          onClick={() => { setShowLiveForm(!showLiveForm); setShowMedForm(false); }}
+                          className="flex-1 py-1.5 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-[#f59e0b] font-black text-[11px] rounded-xl text-center select-none"
+                        >
+                          {showLiveForm ? "✕ Close" : "➕ Register Head"}
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => { setShowMedForm(!showMedForm); setShowLiveForm(false); }}
+                          className="flex-1 py-1.5 bg-indigo-50 border border-indigo-100 hover:bg-indigo-105 text-indigo-600 font-extrabold text-[11px] rounded-xl text-center select-none"
+                        >
+                          {showMedForm ? "✕ Close" : "➕ Log Medicine"}
+                        </button>
+                      </div>
+
+                      {/* Register Head form */}
+                      {showLiveForm && (
+                        <form 
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!liveBreed.trim()) {
+                              alert("Please specify the breed.");
+                              return;
+                            }
+                            const price = Number(livePrice) || 0;
+                            const weight = Number(liveWeight) || 120;
+                            const newId = `ANI-${String(animals.length + 1).padStart(3, "0")}`;
+                            
+                            const createdHead: Animal = {
+                              id: newId,
+                              type: liveType,
+                              breed: liveBreed,
+                              owner: liveOwner || "Farm Central",
+                              weightKg: weight,
+                              purchasePrice: price,
+                              advancePaid: price,
+                              due: 0,
+                              status: "Paid",
+                              investors: [],
+                              dateAdded: new Date().toISOString().split("T")[0],
+                              healthCondition: "9/10 (Excellent)",
+                              isCached: !effectiveOnline
+                            };
+
+                            setAnimals(prev => [createdHead, ...prev]);
+                            setCashBalance(cb => Math.max(0, cb - price));
+                            recordOfflineChange(`Registered head ${newId} (${liveType} - ${liveBreed}) via Dashboard QuickForm`);
+                            alert(`Registered Animal Head ${newId} successfully added to central record registry!`);
+                            setLiveBreed("");
+                            setLivePrice("");
+                            setLiveWeight("");
+                            setShowLiveForm(false);
+                          }}
+                          className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-3.5 text-xs text-slate-700 font-sans"
+                        >
+                          <p className="font-extrabold text-slate-800">Register Livestock Head / পশু নিবন্ধন</p>
+                          
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[9px] uppercase font-black text-slate-400 mb-0.5">Type</label>
+                              <select 
+                                value={liveType}
+                                onChange={(e) => setLiveType(e.target.value as any)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs text-slate-700"
+                              >
+                                <option value="Cow">Cow</option>
+                                <option value="Buffalo">Buffalo</option>
+                                <option value="Goat">Goat</option>
+                                <option value="Sheep">Sheep</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[9px] uppercase font-black text-slate-400 mb-0.5">Breed / জাত</label>
+                              <input 
+                                type="text"
+                                required
+                                placeholder="e.g. Sahiwal"
+                                value={liveBreed}
+                                onChange={(e) => setLiveBreed(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs text-slate-700 focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[9px] uppercase font-black text-slate-400 mb-0.5">Weight (KG)</label>
+                              <input 
+                                type="number"
+                                placeholder="e.g. 180"
+                                value={liveWeight}
+                                onChange={(e) => setLiveWeight(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-205 rounded-lg p-1.5 text-xs text-slate-700"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[9px] uppercase font-black text-slate-400 mb-0.5">Cost Price (₹)</label>
+                              <input 
+                                type="number"
+                                placeholder="e.g. 45000"
+                                value={livePrice}
+                                onChange={(e) => setLivePrice(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-205 rounded-lg p-1.5 text-xs text-slate-700"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[9px] uppercase font-black text-slate-400 mb-0.5">Merchant / বিক্রেতা</label>
+                            <input 
+                              type="text"
+                              value={liveOwner}
+                              onChange={(e) => setLiveOwner(e.target.value)}
+                              placeholder="e.g. Sourcing Brokerage"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs text-slate-700"
+                            />
+                          </div>
+
+                          <button 
+                            type="submit"
+                            className="w-full bg-[#fbbf24] hover:bg-amber-500 text-slate-900 font-extrabold py-2 rounded-lg text-xs"
+                          >
+                            Add Animal Head
+                          </button>
+                        </form>
+                      )}
+
+                      {/* Log medicine form */}
+                      {showMedForm && (
+                        <form 
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!medAnimalId) {
+                              alert("Please select a target Animal.");
+                              return;
+                            }
+                            if (!medType.trim()) {
+                              alert("Please specify checking details (e.g. Dewormer dose).");
+                              return;
+                            }
+                            const cost = Number(medCost) || 0;
+                            
+                            setAnimals(prev => prev.map(a => {
+                              if (a.id === medAnimalId) {
+                                const history = a.healthHistory || [];
+                                const record = {
+                                  id: `MED-${Date.now()}`,
+                                  date: new Date().toISOString().split("T")[0],
+                                  diagnosis: medType,
+                                  treatment: "Administered treatment prescribed.",
+                                  cost,
+                                  notes: `Condition updated to: ${medCondition}`,
+                                  operator: "Veterinary Officer"
+                                };
+                                return {
+                                  ...a,
+                                  healthCondition: medCondition,
+                                  healthHistory: [...history, record],
+                                  medicineCost: (a.medicineCost || 0) + cost
+                                };
+                              }
+                              return a;
+                            }));
+
+                            if (cost > 0) {
+                              setCashBalance(cb => Math.max(0, cb - cost));
+                            }
+                            recordOfflineChange(`Logged medical checkup for ${medAnimalId}: ${medType}`);
+                            alert(`Medical check registered successfully for animal ID ${medAnimalId}!`);
+                            setMedType("");
+                            setMedCost("");
+                            setShowMedForm(false);
+                          }}
+                          className="bg-white border text-xs text-slate-700 rounded-xl p-3.5 space-y-3 font-sans"
+                        >
+                          <p className="font-extrabold text-slate-800">Cattle Vaccination & Treatment / চিকিৎসা রেকর্ড</p>
+                          
+                          <div>
+                            <label className="block text-[9px] uppercase font-black text-slate-400 mb-0.5">Select Animal ID</label>
+                            <select 
+                              value={medAnimalId}
+                              onChange={(e) => setMedAnimalId(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs"
+                            >
+                              <option value="">-- Choose Animal --</option>
+                              {animals.map(ani => (
+                                <option key={ani.id} value={ani.id}>{ani.id} ({ani.type} - {ani.breed})</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[9px] uppercase font-black text-slate-400 mb-0.5">Vaccine/Medicine</label>
+                              <input 
+                                type="text"
+                                required
+                                value={medType}
+                                onChange={(e) => setMedType(e.target.value)}
+                                placeholder="e.g. Vitamin AD3H"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs text-slate-700"
+                              />
+                            </div>
+                            
+                            <div>
+                              <label className="block text-[9px] uppercase font-black text-slate-400 mb-0.5">Health Condition</label>
+                              <select 
+                                value={medCondition}
+                                onChange={(e) => setMedCondition(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs text-slate-700"
+                              >
+                                <option value="Excellent">Excellent</option>
+                                <option value="Healthy">Healthy</option>
+                                <option value="Recovering">Recovering</option>
+                                <option value="Isolated">Isolated</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[9px] uppercase font-black text-slate-400 mb-0.5">Treatment Cost (₹)</label>
+                            <input 
+                              type="number"
+                              value={medCost}
+                              onChange={(e) => setMedCost(e.target.value)}
+                              placeholder="e.g. 250"
+                              className="w-full bg-slate-50 border border-slate-202 rounded-lg p-1.5 text-xs text-slate-705"
+                            />
+                          </div>
+
+                          <button 
+                            type="submit"
+                            className="w-full bg-indigo-600 text-white font-extrabold py-2 rounded-lg text-xs"
+                          >
+                            Save Medical Log
+                          </button>
+                        </form>
+                      )}
+
+                      <button onClick={() => { setActiveTab("livestock"); }} className="text-amber-500 font-bold block pt-1 hover:underline">Inspect entire pen &rarr;</button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ACCORDION 3: Production & Breeding (Collapsed) */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs">
+                  <button 
+                    onClick={() => setCollapsedAccordions(prev => ({ ...prev, production: !prev.production }))}
+                    className="w-full px-4 py-3.5 flex items-center justify-between border-b border-slate-100 hover:bg-slate-50 transition text-left"
+                  >
+                    <span className="text-xs font-extrabold text-slate-600 flex items-center gap-2 uppercase tracking-wide">
+                      🥚 Production & Breeding
+                    </span>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className={`h-4 w-4 text-slate-400 transform transition-transform duration-200 ${!collapsedAccordions.production ? 'rotate-180' : ''}`} 
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {!collapsedAccordions.production && (
+                    <div className="p-4 bg-slate-50/20 text-xs text-slate-600 space-y-4 font-sans text-left">
+                      <p className="text-slate-500 font-bold">Currently tracked gestations and raw milk harvests:</p>
+
+                      {/* Active Gestations List */}
+                      <div className="space-y-2 border border-slate-200 rounded-xl p-2.5 bg-white">
+                        <span className="text-[10px] uppercase font-black font-mono text-slate-400 block mb-1">Active Gestation Registry</span>
+                        {breedingLogs.length === 0 ? (
+                          <p className="text-[10px] text-slate-400">0 active gestations registered on custom dashboard.</p>
+                        ) : (
+                          breedingLogs.map(log => (
+                            <div key={log.id} className="flex justify-between items-center bg-slate-50 text-[10px] p-2 rounded border border-slate-100">
+                              <div>
+                                <p className="font-extrabold text-slate-800">Cow: {log.animalId} (Bull: {log.bullId})</p>
+                                <p className="text-[9px] text-slate-400 font-normal">Status: {log.status}</p>
+                              </div>
+                              <span className="font-mono text-[#f59e0b] font-bold text-[9px]">Birth: {log.expectedDate}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Daily Harvests List */}
+                      <div className="space-y-2 border border-slate-200 rounded-xl p-2.5 bg-white">
+                        <span className="text-[10px] uppercase font-black font-mono text-slate-400 block mb-1 font-bold">Raw Milk Yield Collection Logs</span>
+                        {milkLogs.length === 0 ? (
+                          <p className="text-[10px] text-slate-400">No raw milk collection logged today.</p>
+                        ) : (
+                          milkLogs.map(m => (
+                            <div key={m.id} className="flex justify-between items-center bg-slate-50 text-[10px] p-2 rounded border border-slate-105">
+                              <div>
+                                <p className="font-extrabold text-slate-800">{m.liters} Liters from {m.animalId}</p>
+                                <p className="text-[9px] text-slate-400 font-normal">{m.date}</p>
+                              </div>
+                              <span className="font-mono text-emerald-500 font-bold text-[10px]">+₹{m.totalAmount}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Form Triggers */}
+                      <div className="flex gap-2 font-normal">
+                        <button 
+                          type="button"
+                          onClick={() => { setShowBreedForm(!showBreedForm); setShowDairyForm(false); }}
+                          className="flex-1 py-1.5 bg-indigo-50 border border-slate-200 text-indigo-700 font-bold text-[10px] rounded-lg text-center"
+                        >
+                          {showBreedForm ? "✕ Close" : "🍼 Log Gestation"}
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => { setShowDairyForm(!showDairyForm); setShowBreedForm(false); }}
+                          className="flex-1 py-1.5 bg-emerald-50 border border-slate-200 text-emerald-700 font-bold text-[10px] rounded-lg text-center"
+                        >
+                          {showDairyForm ? "✕ Close" : "🥛 Record Dairy Yield"}
+                        </button>
+                      </div>
+
+                      {/* Breeding form */}
+                      {showBreedForm && (
+                        <form 
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!breedAnimalId || !breedBullId) {
+                              alert("Please selectCow ID and enter Bull semen.");
+                              return;
+                            }
+                            const sDate = new Date().toISOString().split("T")[0];
+                            const servObj = new Date();
+                            servObj.setDate(servObj.getDate() + 280); 
+                            const expDate = servObj.toISOString().split("T")[0];
+
+                            const newGestationLog = {
+                              id: `B-${breedingLogs.length + 1}`,
+                              animalId: breedAnimalId,
+                              bullId: breedBullId,
+                              serviceDate: sDate,
+                              expectedDate: expDate,
+                              status: "Active Gestation",
+                              notes: breedNotes || "Healthy gestation"
+                            };
+
+                            setBreedingLogs([newGestationLog, ...breedingLogs]);
+                            recordOfflineChange(`Registered breeding gestation cycle for ${breedAnimalId}`);
+                            alert(`Gestation cycle reported! Expected calving delivery calculated: ${expDate}`);
+                            setBreedNotes("");
+                            setShowBreedForm(false);
+                          }}
+                          className="bg-white border rounded-xl p-3.5 space-y-3 text-xs text-slate-700 font-sans"
+                        >
+                          <p className="font-bold text-slate-800">Artificial Insemination Gestation / প্রজনন রেকর্ড</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[8px] uppercase font-black text-slate-400 mb-0.5">Mother Cow ID</label>
+                              <select 
+                                value={breedAnimalId} 
+                                onChange={(e) => setBreedAnimalId(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 p-1 text-[11px] rounded"
+                              >
+                                <option value="">-- Choose Cow --</option>
+                                {animals.filter(a => a.type === "Cow" || a.type === "Bull").map(c => (
+                                  <option key={c.id} value={c.id}>{c.id} ({c.breed})</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[8px] uppercase font-black text-slate-400 mb-0.5">Bull Semen ID</label>
+                              <input 
+                                type="text"
+                                required
+                                placeholder="e.g. BULL-55"
+                                value={breedBullId}
+                                onChange={(e) => setBreedBullId(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[11px]"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[8px] uppercase font-black text-slate-400 mb-0.5">Insemination notes</label>
+                            <input 
+                              type="text"
+                              placeholder="e.g. Ultra high index semen straw"
+                              value={breedNotes}
+                              onChange={(e) => setBreedNotes(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[11px]"
+                            />
+                          </div>
+
+                          <button type="submit" className="w-[100%] bg-[#fbbf24] hover:bg-amber-500 text-slate-900 font-extrabold py-2 rounded text-[11px]">
+                            Save Pregnancy Log
+                          </button>
+                        </form>
+                      )}
+
+                      {/* Dairy form */}
+                      {showDairyForm && (
+                        <form 
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            const liters = Number(dairyLiters);
+                            const r = Number(dairyRate) || 80;
+                            if (!dairyAnimalId || !liters || liters <= 0) {
+                              alert("Please fill all valid details.");
+                              return;
+                            }
+                            const totalVal = liters * r;
+                            const createdLog = {
+                              id: `M-${milkLogs.length + 1}`,
+                              date: new Date().toISOString().split("T")[0],
+                              animalId: dairyAnimalId,
+                              liters,
+                              ratePerLiter: r,
+                              totalAmount: totalVal
+                            };
+
+                            setMilkLogs([createdLog, ...milkLogs]);
+                            setCashBalance(cb => cb + totalVal);
+                            recordOfflineChange(`Recorded milk output harvest: ${liters}L from cow ${dairyAnimalId}`);
+                            alert(`Daily Dairy yields logged successfully. ₹{totalVal.toLocaleString()} added to cash balance!`);
+                            setDairyLiters("");
+                            setShowDairyForm(false);
+                          }}
+                          className="bg-white border rounded-xl p-3.5 space-y-3 text-xs text-slate-700 font-sans"
+                        >
+                          <p className="font-bold text-slate-800 font-sans">Organic Raw Milk Production yields / দুগ্ধ উৎপাদন</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[8px] uppercase font-black text-slate-400 mb-0.5 font-bold">Cow ID / মাদী গরু</label>
+                              <select 
+                                value={dairyAnimalId} 
+                                onChange={(e) => setDairyAnimalId(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[11px]"
+                              >
+                                <option value="">-- Choose Cow --</option>
+                                {animals.filter(a => a.type === "Cow").map(c => (
+                                  <option key={c.id} value={c.id}>{c.id} ({c.breed})</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[8px] uppercase font-black text-slate-400 mb-0.5">Quantity (Liters)</label>
+                              <input 
+                                type="number"
+                                required
+                                placeholder="e.g. 15"
+                                value={dairyLiters}
+                                onChange={(e) => setDairyLiters(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 p-1 text-[11px] rounded"
+                              />
+                            </div>
+                          </div>
+
+                          <button type="submit" className="w-[100%] bg-[#fbbf24] hover:bg-amber-500 text-slate-900 font-extrabold py-2 rounded text-[11px]">
+                            Log Collection Yield
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ACCORDION 4: Inventory & Supplies (Collapsed) */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs">
+                  <button 
+                    onClick={() => setCollapsedAccordions(prev => ({ ...prev, inventory: !prev.inventory }))}
+                    className="w-full px-4 py-3.5 flex items-center justify-between border-b border-slate-100 hover:bg-slate-50 transition text-left"
+                  >
+                    <span className="text-xs font-extrabold text-slate-600 flex items-center gap-2 uppercase tracking-wide">
+                      📦 Inventory & Supplies
+                    </span>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className={`h-4 w-4 text-slate-400 transform transition-transform duration-200 ${!collapsedAccordions.inventory ? 'rotate-180' : ''}`} 
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {!collapsedAccordions.inventory && (
+                    <div className="p-4 bg-slate-50/20 text-xs text-slate-600 space-y-4 font-sans text-left">
+                      <p className="font-bold text-slate-705">Grain Silos Inventory Levels / গো-খাদ্য মজুদ:</p>
+                      
+                      <div className="space-y-1 bg-white border border-slate-200 rounded-xl p-2 font-mono text-[10px]">
+                        {feedStock.slice(0, 5).map(f => (
+                          <div key={f.id} className="flex justify-between items-center py-1 border-b border-slate-100 last:border-none">
+                            <span className="text-slate-700 font-sans font-medium">{f.type}</span>
+                            <span className="font-bold text-slate-900 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{f.sackCount} sacks</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button 
+                        type="button"
+                        onClick={() => setShowFeedForm(!showFeedForm)}
+                        className="w-full py-2 bg-amber-500/10 hover:bg-[#fbbf24]/20 text-[#fbbf24] font-black rounded-lg text-[10px] select-none text-center cursor-pointer"
+                      >
+                        {showFeedForm ? "✕ Close Silo Form" : "🛠️ Record Sacks Intake / Consumption Update"}
+                      </button>
+
+                      {showFeedForm && (
+                        <form 
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!feedItemId) {
+                              alert("Please choose a silo feed stock.");
+                              return;
+                            }
+                            const cnt = parseInt(feedSacksChange, 10);
+                            if (!cnt || cnt <= 0) {
+                              alert("Please enter a valid count of sacks.");
+                              return;
+                            }
+
+                            setFeedStock(prev => prev.map(item => {
+                              if (item.id === feedItemId) {
+                                const initialVal = item.sackCount || 0;
+                                let afterChange = initialVal;
+                                if (feedOperation === "Deposit") {
+                                  afterChange = initialVal + cnt;
+                                  const cost = cnt * (item.unitCostPerSack || 1000);
+                                  setCashBalance(cb => Math.max(0, cb - cost));
+                                } else {
+                                  if (initialVal < cnt) {
+                                    alert(`Insufficient silo stocks. Only ${initialVal} sacks remaining.`);
+                                    return item;
+                                  }
+                                  afterChange = initialVal - cnt;
+                                }
+                                return { ...item, sackCount: afterChange };
+                              }
+                              return item;
+                            }));
+
+                            recordOfflineChange(`${feedOperation}ed ${cnt} sacks of ${feedItemId} Silo stock.`);
+                            alert(`Stock levels processed and dynamically synced inside feed database!`);
+                            setFeedSacksChange("");
+                            setShowFeedForm(false);
+                          }}
+                          className="bg-white border rounded-xl p-3 text-xs space-y-3 font-normal text-slate-700"
+                        >
+                          <p className="font-extrabold text-slate-800">Silo Husk Logistics Form / গো-খাদ্য আপডেট</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[8px] uppercase font-black text-slate-400 mb-0.5">Select Feed Silo</label>
+                              <select 
+                                value={feedItemId}
+                                onChange={(e) => setFeedItemId(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[11px]"
+                              >
+                                <option value="">-- Choose Stock --</option>
+                                {feedStock.map(f => (
+                                  <option key={f.id} value={f.id}>{f.type}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[8px] uppercase font-black text-slate-400 mb-0.5">Operation Type</label>
+                              <select 
+                                value={feedOperation}
+                                onChange={(e) => setFeedOperation(e.target.value as any)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[11px]"
+                              >
+                                <option value="Deposit">Deposit (+ Add)</option>
+                                <option value="Disburse">Disburse (- Consume)</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[8px] uppercase font-black text-slate-400 mb-0.5">Quantity of Sacks / বস্তা সংখ্যা</label>
+                            <input 
+                              type="number"
+                              required
+                              placeholder="e.g. 10"
+                              value={feedSacksChange}
+                              onChange={(e) => setFeedSacksChange(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[11px]"
+                            />
+                          </div>
+
+                          <button type="submit" className="w-[100%] bg-slate-900 text-white font-extrabold py-2 rounded text-[11px]">
+                            Process Silo Adjustment
+                          </button>
+                        </form>
+                      )}
+
+                      <button onClick={() => { setActiveTab("cattle-feed"); }} className="text-amber-500 font-bold hover:underline block text-center">Cattle Feed Silos Dashboard &rarr;</button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ACCORDION 5: External Alerts (Collapsed) */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs">
+                  <button 
+                    onClick={() => setCollapsedAccordions(prev => ({ ...prev, alerts: !prev.alerts }))}
+                    className="w-full px-4 py-3.5 flex items-center justify-between border-b border-slate-100 hover:bg-slate-50 transition text-left"
+                  >
+                    <span className="text-xs font-extrabold text-slate-600 flex items-center gap-2 uppercase tracking-wide">
+                      🚨 External Alerts
+                    </span>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className={`h-4 w-4 text-slate-400 transform transition-transform duration-200 ${!collapsedAccordions.alerts ? 'rotate-180' : ''}`} 
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {!collapsedAccordions.alerts && (
+                    <div className="p-4 bg-slate-50/20 text-xs text-rose-600 space-y-4 font-sans text-left">
+                      
+                      {/* Active warnings list */}
+                      <div className="space-y-2 border border-rose-100 rounded-xl p-2.5 bg-white font-normal text-slate-705">
+                        <span className="text-[9px] uppercase font-bold tracking-wide font-mono text-slate-400 block mb-1">Active Alerts / জরুরী সতর্কতা</span>
+                        {customAlerts.map(alertItem => (
+                          <div key={alertItem.id} className="p-2 rounded bg-rose-50/50 border border-rose-100 text-[11px] leading-snug">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="font-bold text-rose-800">{alertItem.subject}</span>
+                              <span className="text-[8px] px-1 bg-rose-100 text-rose-600 rounded font-bold font-mono uppercase text-[7px]">{alertItem.urgency}</span>
+                            </div>
+                            <p className="text-slate-600 text-[10px]">{alertItem.details}</p>
+                            <p className="text-[9px] text-slate-400 font-mono mt-1 font-bold">Target audience: {alertItem.department}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button 
+                        type="button"
+                        onClick={() => setShowAlertForm(!showAlertForm)}
+                        className="w-full py-1.5 bg-rose-100 text-rose-600 font-bold rounded-lg text-[10px] select-none text-center block"
+                      >
+                        {showAlertForm ? "✕ Close Broadcast Form" : "🚨 Broadcast New Herdsmen Telegram Alert / সতর্কতা"}
+                      </button>
+
+                      {showAlertForm && (
+                        <form 
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!alertFormSubject.trim() || !alertFormDetails.trim()) {
+                              alert("Please fill all alert values.");
+                              return;
+                            }
+                            const createdAlertObj = {
+                              id: `A-${customAlerts.length + 1}`,
+                              subject: alertFormSubject,
+                              details: alertFormDetails,
+                              urgency: alertFormUrgency,
+                              department: alertFormDept,
+                              date: new Date().toISOString().split("T")[0]
+                            };
+
+                            setCustomAlerts([createdAlertObj, ...customAlerts]);
+                            recordOfflineChange(`Sent warning alert inside network: ${alertFormSubject}`);
+                            alert(`Broadcast warning sent inside entire farm grid coordinates successfully.`);
+                            setAlertFormSubject("");
+                            setAlertFormDetails("");
+                            setShowAlertForm(false);
+                          }}
+                          className="bg-white border rounded-xl p-3 text-xs text-slate-700 space-y-3"
+                        >
+                          <p className="font-bold text-rose-750 font-sans text-rose-700">Dispatched Active Alarm Service / নতুন সতর্কতা</p>
+                          <div>
+                            <label className="block text-[8px] uppercase font-black text-slate-400 mb-0.5">Warning Alert Subject</label>
+                            <input 
+                              type="text"
+                              required
+                              placeholder="e.g. Gale Warning Forecast"
+                              value={alertFormSubject}
+                              onChange={(e) => setAlertFormSubject(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[11px]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[8px] uppercase font-black text-slate-400 mb-0.5 font-bold">Alert Description</label>
+                            <textarea
+                              required
+                              rows={2}
+                              value={alertFormDetails}
+                              onChange={(e) => setAlertFormDetails(e.target.value)}
+                              placeholder="Describe warning details..."
+                              className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[11px]"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[8px] uppercase font-black text-slate-400 mb-0.5">Urgency Level</label>
+                              <select 
+                                value={alertFormUrgency}
+                                onChange={(e) => setAlertFormUrgency(e.target.value as any)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[11px]"
+                              >
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[8px] uppercase font-black text-slate-400 mb-0.5 font-bold">Target Audience</label>
+                              <select 
+                                value={alertFormDept}
+                                onChange={(e) => setAlertFormDept(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[11px]"
+                              >
+                                <option value="All Hands">All Hands</option>
+                                <option value="Livestock Management">Livestock Management</option>
+                                <option value="Sourcing Sinks">Sourcing Sinks</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <button type="submit" className="w-[100%] bg-rose-600 text-white font-extrabold py-2 rounded text-[11px]">
+                            Disseminate Active Telemetry Alert
+                          </button>
+                        </form>
+                      )}
+
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+
+            {/* INTERACTIVE FLOATING ACTION CHAT BUTTON */}
+            <button 
+              onClick={() => {
+                setActiveTab("ai-assistant");
+                setIsMoreMenuOpen(false);
+              }}
+              className="fixed bottom-[88px] right-5 z-40 bg-[#fbbf24] hover:bg-amber-500 hover:scale-105 active:scale-95 text-slate-900 font-black px-4 py-3.5 rounded-full flex items-center gap-2 shadow-lg transition duration-200 select-none outline-none focus:outline-none"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-900" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0V6H3a1 1 0 110-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clipRule="evenodd" />
+              </svg>
+              <span className="text-xs font-mono tracking-wide uppercase">Chat to Record</span>
+            </button>
+
+            {/* DYNAMIC INTERACTIVE SCHEDULE TASKS MODAL */}
+            {isScheduleModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+                <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 animate-scaleIn text-slate-800">
+                  <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+                    <span className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                      📅 Schedule New Farm Task
+                    </span>
+                    <button 
+                      onClick={() => setIsScheduleModalOpen(false)}
+                      className="text-slate-400 hover:text-slate-600 p-1.5"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4 pt-4">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase text-slate-400 font-mono mb-1.5">Task Description / নাম</label>
+                      <input 
+                        type="text" 
+                        value={newTaskName}
+                        onChange={(e) => setNewTaskName(e.target.value)}
+                        placeholder="e.g., Feed calves in Pen 2, checkup bulls..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black uppercase text-slate-400 font-mono mb-1.5">Task Category / বিভাগ</label>
+                      <select 
+                        value={newTaskCategory}
+                        onChange={(e) => setNewTaskCategory(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-805"
+                      >
+                        <option value="Livestock & Health">Livestock & Health</option>
+                        <option value="Production & Breeding">Production & Breeding</option>
+                        <option value="Inventory & Supplies">Inventory & Supplies</option>
+                        <option value="Financial & Sourcing">Financial & Sourcing</option>
+                      </select>
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        if (!newTaskName.trim()) {
+                          alert("Please specify a valid task description first.");
+                          return;
+                        }
+                        const newTask = {
+                          id: Date.now().toString(),
+                          name: newTaskName,
+                          category: newTaskCategory,
+                          date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                        };
+                        setUpcomingTasks(prev => [...prev, newTask]);
+                        setNewTaskName("");
+                        setIsScheduleModalOpen(false);
+                      }}
+                      className="w-full bg-[#fbbf24] hover:bg-amber-500 text-slate-900 font-black text-xs py-3 rounded-xl transition shadow-xs select-none"
+                    >
+                      Process & Register Task
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* COOPERATIVE COMMUNITY UPDATE MODAL */}
+            {isCommunityModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+                <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 animate-scaleIn text-slate-800">
+                  <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+                    <span className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                      👥 Cooperative Community Forum
+                    </span>
+                    <button 
+                      onClick={() => setIsCommunityModalOpen(false)}
+                      className="text-slate-400 hover:text-slate-600 p-1.5"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4 pt-4 text-xs text-slate-600 leading-relaxed font-sans">
+                    <p className="font-extrabold text-[#f59e0b]">Updates from the Farm Cooperative Collective:</p>
+                    
+                    <div className="space-y-3">
+                      <div className="p-2.5 bg-amber-50/50 border border-amber-100 rounded-xl">
+                        <p className="font-bold text-slate-800">🌽 Cooperative Silage Bulk Sourcing</p>
+                        <p className="text-[11px] mt-0.5 text-slate-500">We are combining silage and husk forage procurement logs next Friday to receive wholesale discount offsets from verified regional traders.</p>
+                      </div>
+                      
+                      <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
+                        <p className="font-bold text-slate-800">🐃 Gabtoli Sourcing Security Protocol</p>
+                        <p className="text-[11px] mt-0.5 text-slate-500">Always record front/side photos and bazar receipts immediately upon loading cattle on logistics trucks.</p>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => setIsCommunityModalOpen(false)}
+                      className="w-full mt-2 bg-slate-900 text-white hover:bg-slate-800 py-3 rounded-xl font-bold transition select-none"
+                    >
+                      Acknowledge updates
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MORE TABS BOTTOM SLIDING DRAWER MENU */}
+            {isMoreMenuOpen && (
+              <div className="fixed inset-x-0 bottom-16 z-50 p-4 bg-white border-t border-slate-200 rounded-t-3xl shadow-[0_-10px_35px_rgba(0,0,0,0.1)] max-w-2xl mx-auto animate-fadeIn text-slate-800">
+                <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-3">
+                  <span className="text-xs font-black uppercase text-slate-400 tracking-wider font-mono">Navigate Farm Divisions / বিভাগসমূহ</span>
+                  <button onClick={() => setIsMoreMenuOpen(false)} className="text-slate-400 p-1">✕</button>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 pb-2">
+                  <button 
+                    onClick={() => { setActiveTab("cattle-feed"); setIsMoreMenuOpen(false); }}
+                    className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-amber-50/30 transition text-left cursor-pointer"
+                  >
+                    <span className="text-xl">🌾</span>
+                    <div>
+                      <p className="text-xs font-bold text-slate-850">Cattle Feed Silos</p>
+                      <p className="text-[10px] text-slate-400">Grains & Silage Stocks</p>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { setActiveTab("butchers"); setIsMoreMenuOpen(false); }}
+                    className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-amber-50/30 transition text-left cursor-pointer"
+                  >
+                    <span className="text-xl">🥩</span>
+                    <div>
+                      <p className="text-xs font-bold text-slate-850">Butcher Despatches</p>
+                      <p className="text-[10px] text-slate-400">Yield yields tracking</p>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { setActiveTab("ai-assistant"); setIsMoreMenuOpen(false); }}
+                    className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-amber-50/30 transition text-left cursor-pointer"
+                  >
+                    <span className="text-xl">✨</span>
+                    <div>
+                      <p className="text-xs font-bold text-slate-850">Smart AI Assistant</p>
+                      <p className="text-[10px] text-slate-400">Gemini-driven audit</p>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { setActiveTab("dashboard"); setIsMoreMenuOpen(false); }}
+                    className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-amber-50/30 transition text-left cursor-pointer"
+                  >
+                    <span className="text-xl">📊</span>
+                    <div>
+                      <p className="text-xs font-bold text-slate-850">Advanced Dashboard</p>
+                      <p className="text-[10px] text-slate-400">Centralized metrics</p>
+                    </div>
+                  </button>
+
+                  {/* Language switch */}
+                  <button 
+                    onClick={() => { setLang(lang === "en" ? "bn" : "en"); setIsMoreMenuOpen(false); }}
+                    className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-150 bg-amber-50/50 hover:bg-amber-100/30 transition text-left cursor-pointer col-span-2 justify-center"
+                  >
+                    <span className="text-sm font-black text-[#f59e0b]">Translate / {lang === 'en' ? 'বাংলা রূপান্তর' : 'English View'}</span>
+                  </button>
+                  
+                  {/* Logout admin */}
+                  <button 
+                    onClick={() => { setCurrentUser(null); setActiveTab("home"); setIsMoreMenuOpen(false); }}
+                    className="flex items-center gap-2.5 p-2.5 rounded-xl border border-rose-100 hover:bg-rose-50 text-rose-500 font-bold transition text-xs col-span-2 justify-center cursor-pointer"
+                  >
+                    Exit Application / লগ-আউট করুন
+                  </button>
+
+                </div>
+              </div>
+            )}
+
+            {/* PERSISTENT BEAUTIFUL BOTTOM NAVIGATION (Screenshot 1 / 2) */}
+            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-100 py-3.5 px-4 flex justify-around items-center shadow-[0_-5px_15px_rgba(0,0,0,0.04)] select-none">
+              
+              {/* TAB 1: HOME */}
+              <button 
+                onClick={() => {
+                  setActiveTab("home");
+                  setIsMoreMenuOpen(false);
+                }}
+                className="flex flex-col items-center justify-center gap-1 shrink-0 transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${activeTab === "home" ? "text-amber-500" : "text-slate-400"}`} fill={activeTab === "home" ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeTab === "home" ? 2.5 : 2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                <span className={`text-[10px] font-sans font-extrabold ${activeTab === "home" ? "text-amber-500" : "text-slate-400"}`}>Home</span>
+              </button>
+
+              {/* TAB 2: BATCHES */}
+              <button 
+                onClick={() => {
+                  setActiveTab("livestock");
+                  setIsMoreMenuOpen(false);
+                }}
+                className="flex flex-col items-center justify-center gap-1 shrink-0 transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${activeTab === "livestock" ? "text-amber-500" : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span className={`text-[10px] font-sans font-extrabold ${activeTab === "livestock" ? "text-amber-500" : "text-slate-400"}`}>Batches</span>
+              </button>
+
+              {/* TAB 3: FINANCES */}
+              <button 
+                onClick={() => {
+                  setActiveTab("investors");
+                  setIsMoreMenuOpen(false);
+                }}
+                className="flex flex-col items-center justify-center gap-1 shrink-0 transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${activeTab === "investors" ? "text-amber-500" : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className={`text-[10px] font-sans font-extrabold ${activeTab === "investors" ? "text-amber-500" : "text-slate-400"}`}>Finances</span>
+              </button>
+
+              {/* TAB 4: RECORDS */}
+              <button 
+                onClick={() => {
+                  setActiveTab("retail");
+                  setIsMoreMenuOpen(false);
+                }}
+                className="flex flex-col items-center justify-center gap-1 shrink-0 transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${activeTab === "retail" ? "text-amber-500" : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                <span className={`text-[10px] font-sans font-extrabold ${activeTab === "retail" ? "text-amber-500" : "text-slate-400"}`}>Records</span>
+              </button>
+
+              {/* TAB 5: COMMUNITY */}
+              <button 
+                onClick={() => {
+                  setIsCommunityModalOpen(true);
+                  setIsMoreMenuOpen(false);
+                }}
+                className="flex flex-col items-center justify-center gap-1 shrink-0 transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span className="text-[10px] font-sans font-extrabold text-slate-400">Community</span>
+              </button>
+
+              {/* TAB 6: MORE... */}
+              <button 
+                onClick={() => {
+                  setIsMoreMenuOpen(!isMoreMenuOpen);
+                }}
+                className="flex flex-col items-center justify-center gap-1 shrink-0 transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${isMoreMenuOpen ? "text-[#fbbf24]" : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <span className={`text-[10px] font-sans font-extrabold ${isMoreMenuOpen ? "text-[#fbbf24]" : "text-slate-400"}`}>More...</span>
+              </button>
+
+            </div>
+
           </div>
         )}
 
@@ -4527,13 +6058,22 @@ _Empowered by ShaieAlam ERP Systems_`;
                     Log animal purchase contracts, weigh-ins, trace outstanding supplier dues, and process live animals into counter cold displays.
                   </p>
                 </div>
-                <button
-                  onClick={() => checkPermissionAndRun("add-animal", () => setShowAddAnimalModal(true))}
-                  className="bg-teal-500 text-slate-950 font-bold px-4 py-2.5 rounded-xl hover:bg-teal-400 text-xs flex items-center gap-2 transition cursor-pointer self-stretch md:self-auto justify-center"
-                >
-                  <PlusCircle className="h-4 w-4" />
-                  {activeTrans.addAnimalBtn}
-                </button>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto self-stretch md:self-auto">
+                  <button
+                    onClick={() => openInvestmentCalculator("Cow")}
+                    className="bg-slate-900 text-teal-400 font-bold px-4 py-2.5 rounded-xl hover:bg-slate-800 text-xs flex items-center gap-2 border border-slate-800 hover:border-slate-700 transition cursor-pointer justify-center"
+                  >
+                    <Calculator className="h-4 w-4 text-teal-400" />
+                    <span>Investment Calculator</span>
+                  </button>
+                  <button
+                    onClick={() => checkPermissionAndRun("add-animal", () => setShowAddAnimalModal(true))}
+                    className="bg-teal-500 text-slate-950 font-bold px-4 py-2.5 rounded-xl hover:bg-teal-400 text-xs flex items-center gap-2 transition cursor-pointer justify-center"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    {activeTrans.addAnimalBtn}
+                  </button>
+                </div>
               </div>
 
               {/* Administrator Supplier Due Reminders Panel */}
@@ -4618,40 +6158,154 @@ _Empowered by ShaieAlam ERP Systems_`;
                 </button>
               </div>
 
-              {/* Batch Slicing Action panel */}
+              {/* Batch Slicing & Bulk Actions panel */}
               {selectedAnimalIds.length > 0 && (
-                <div className="bg-teal-500/10 border border-teal-500/35 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-teal-500 text-slate-950 p-2 rounded-xl">
-                      <Layers className="h-5 w-5" />
+                <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-3xl space-y-4 animate-fadeIn mb-4">
+                  <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-teal-500 text-slate-950 p-2.5 rounded-2xl shrink-0 shadow-lg">
+                        <Layers className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-white uppercase font-mono tracking-wider flex items-center gap-2">
+                          <span>Batch Operations & Slicing Panel</span>
+                          <span className="bg-teal-500/10 text-teal-400 border border-teal-500/20 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                            {selectedAnimalIds.length} Animals Selected
+                          </span>
+                        </h4>
+                        <p className="text-[11px] text-slate-400 font-medium whitespace-normal">
+                          Perform a bulk attribute update (Health / Owner) or process the selected animals into counter cold stock simultaneously.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-white">Batch Slicing Queue Active ({selectedAnimalIds.length} Animals Selected)</h4>
-                      <p className="text-[11px] text-slate-400">Process these selected animals into cold-stored inventory counters simultaneously.</p>
+                    
+                    <div className="flex items-center gap-2.5 w-full lg:w-auto self-stretch lg:self-auto shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBatchYieldRatio(0.52);
+                          setShowBatchProcessModal(true);
+                        }}
+                        className="flex-1 lg:flex-none px-4 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-lg select-none cursor-pointer text-center"
+                      >
+                        <ChefHat className="h-4 w-4" />
+                        Process Selected Batch
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedAnimalIds([]);
+                        }}
+                        className="flex-1 lg:flex-none px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold rounded-xl text-xs transition active:scale-95 select-none cursor-pointer text-center"
+                      >
+                        Deselect All
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBatchYieldRatio(0.52);
-                        setShowBatchProcessModal(true);
-                      }}
-                      className="flex-1 sm:flex-none px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-1.5 transition cursor-pointer select-none"
-                    >
-                      <ChefHat className="h-4 w-4" />
-                      Process Selected Batch
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedAnimalIds([]);
-                      }}
-                      className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold rounded-xl text-xs transition cursor-pointer select-none"
-                    >
-                      Deselect All
-                    </button>
+
+                  {/* Bulk Edit Attribute Updates Grid */}
+                  <div className="border-t border-slate-800/80 pt-4 mt-1">
+                    <div className="bg-slate-950/80 p-4 border border-slate-850 rounded-2xl space-y-4">
+                      <div className="flex items-center gap-2 pb-2 border-b border-slate-950 text-xs font-mono font-bold tracking-wide uppercase text-teal-400">
+                        <Edit className="h-4 w-4" />
+                        <span>Bulk Update Attributes (Health / Owner)</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        
+                        {/* Column 1: Bulk Health Condition */}
+                        <div className="space-y-2">
+                          <label className="text-[10px] text-slate-400 font-mono uppercase tracking-wider block font-bold">
+                            1. Bulk Update Health Condition
+                          </label>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <select
+                              value={bulkHealthCondition}
+                              onChange={(e) => {
+                                setBulkHealthCondition(e.target.value);
+                                if (e.target.value) setBulkHealthConditionCustom("");
+                              }}
+                              className="flex-1 bg-slate-900 text-slate-200 text-xs border border-slate-800 rounded-xl px-3 py-2 focus:outline-none focus:border-teal-500 cursor-pointer font-sans min-h-[36px]"
+                              style={{ padding: '8px 12px' }}
+                            >
+                              <option value="">-- Select Preset Condition --</option>
+                              <option value="9/10 (Excellent health condition)">Excellent Welfare (9/10)</option>
+                              <option value="8/10 (Good health condition)">Good Health (8/10)</option>
+                              <option value="6/10 (Ok health condition)">Satisfactory (6/10)</option>
+                              <option value="Under Veterinary Care">Veterinary Watch (Sick)</option>
+                              <option value="Quarantined">Under Quarantine (Restricted)</option>
+                            </select>
+                            
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                placeholder="Or enter custom health state..."
+                                value={bulkHealthConditionCustom}
+                                onChange={(e) => {
+                                  setBulkHealthConditionCustom(e.target.value);
+                                  if (e.target.value) setBulkHealthCondition("");
+                                }}
+                                className="w-full bg-slate-900 text-slate-200 text-xs border border-slate-800 rounded-xl px-3 py-2 focus:outline-none focus:border-teal-500 font-sans min-h-[36px]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Column 2: Bulk Owner Update */}
+                        <div className="space-y-2">
+                          <label className="text-[10px] text-slate-400 font-mono uppercase tracking-wider block font-bold">
+                            2. Bulk Update Sourcing Owner / Supplier
+                          </label>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <select
+                              value={bulkOwner}
+                              onChange={(e) => {
+                                setBulkOwner(e.target.value);
+                                if (e.target.value) setBulkOwnerCustom("");
+                              }}
+                              className="flex-1 bg-slate-900 text-slate-200 text-xs border border-slate-800 rounded-xl px-3 py-2 focus:outline-none focus:border-teal-500 cursor-pointer font-sans min-h-[36px]"
+                              style={{ padding: '8px 12px' }}
+                            >
+                              <option value="">-- Select Existing Owner --</option>
+                              {uniqueOwners.map(owner => (
+                                <option key={owner} value={owner}>{owner}</option>
+                              ))}
+                            </select>
+                            
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                placeholder="Or enter new owner name..."
+                                value={bulkOwnerCustom}
+                                onChange={(e) => {
+                                  setBulkOwnerCustom(e.target.value);
+                                  if (e.target.value) setBulkOwner("");
+                                }}
+                                className="w-full bg-slate-900 text-slate-200 text-xs border border-slate-800 rounded-xl px-3 py-2 focus:outline-none focus:border-teal-500 font-sans min-h-[36px]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2.5 border-t border-slate-900">
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          ℹ️ All selected active animals will be set with the entered health state or supplier name. Unfilled attributes are skipped.
+                        </span>
+                        
+                        <button
+                          type="button"
+                          onClick={handleBulkUpdate}
+                          className="w-full sm:w-auto px-5 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-extrabold rounded-xl text-xs tracking-wider flex items-center justify-center gap-1.5 transition active:scale-95 shadow-lg select-none cursor-pointer uppercase"
+                        >
+                          ⚡ Apply Bulk Changes
+                        </button>
+                      </div>
+                    </div>
                   </div>
+
                 </div>
               )}
 
@@ -6206,29 +7860,123 @@ _Empowered by ShaieAlam ERP Systems_`;
                 /* NEW CUSTOMER TRACKER WORKSPACE */
                 <div className="space-y-6 animate-fadeIn">
                     
-                    {/* Customer Tracker Header banner / instructions */}
-                    <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                          <h3 className="text-lg font-black text-white flex items-center gap-2 font-mono">
-                            <UserCheck className="h-5.5 w-5.5 text-teal-400" />
-                            CUSTOMER TRANSACTION LEDGER & TRACKER
-                          </h3>
-                          <p className="text-xs text-slate-400 mt-1">
-                            Consolidated history of transactions, installments, and outstanding balances grouped by unique customer code.
-                          </p>
+                    {/* Customer Ledger Top Header Cards (Screenshot 1 Format) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {/* You will give Card (Green theme) */}
+                      <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800/80 flex items-center justify-between shadow-xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl -mr-6 -mt-6 transition group-hover:bg-emerald-500/10"></div>
+                        <div className="space-y-1 z-10">
+                          <span className="text-[10px] text-emerald-500 uppercase font-mono tracking-widest font-black block">
+                            You will give (আপনার দেনা)
+                          </span>
+                          <span className="text-3xl font-black text-emerald-400 font-mono tracking-tight block">
+                            ₹{animals.reduce((sum, a) => sum + (a.due || 0), 0).toLocaleString()}
+                          </span>
+                          <span className="text-[9px] text-slate-500 block">Outstanding dues to sellers & suppliers</span>
                         </div>
-                        <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl flex items-center gap-3">
-                          <Users className="h-4 w-4 text-emerald-400" />
+                        <div className="h-12 w-12 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400">
+                          <ArrowRightLeft className="h-5 w-5" />
+                        </div>
+                      </div>
+
+                      {/* You will get Card (Red theme) */}
+                      <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800 shadow-xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl -mr-6 -mt-6 transition group-hover:bg-rose-500/10"></div>
+                        <div className="space-y-1 z-10">
+                          <span className="text-[10px] text-rose-500 uppercase font-mono tracking-widest font-black block">
+                            You will get (আপনার পাওনা)
+                          </span>
+                          <span className="text-3xl font-black text-rose-500 font-mono tracking-tight block">
+                            ₹{sales.reduce((sum, s) => sum + (s.amountDue || 0), 0).toLocaleString()}
+                          </span>
+                          <span className="text-[9px] text-slate-500 block">Receivables from retail credit buyers</span>
+                        </div>
+                        <div className="h-12 w-12 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-center text-rose-500 animate-pulse">
+                          <Coins className="h-5 w-5" />
+                        </div>
+                      </div>
+
+                      {/* Report card and Quick Actions (View Reports / Reset Panel) */}
+                      <div className="bg-slate-955 p-5 rounded-3xl border border-slate-800/80 flex flex-col justify-between shadow-xl sm:col-span-2 lg:col-span-1 gap-2.5">
+                        <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Active Customers Code Base</p>
-                            <p className="text-sm font-black text-white font-mono">
-                              {(() => {
-                                const uniqueCodes = new Set(sales.map(s => s.customerCode).filter(Boolean));
-                                return uniqueCodes.size;
-                              })()} registered accounts
-                            </p>
+                            <h4 className="text-xs font-bold text-white uppercase font-mono">Ledger Master Controls</h4>
+                            <p className="text-[10px] text-slate-500 mt-0.5">Generate statements or reset layout dataset</p>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Reset current credit balances to screenshot default mock values? This will wipe local changes for collections.")) {
+                                setSales(initialSales);
+                                setAnimals(initialAnimals);
+                                localStorage.removeItem("mf_sales");
+                                localStorage.removeItem("mf_animals");
+                                setSelectedTrackerCode("");
+                                alert("Accounts ledger reset to pristine screenshot values successfully!");
+                              }
+                            }}
+                            className="text-[9px] border border-slate-800 hover:border-slate-700 bg-slate-900 px-2 py-1 rounded-lg text-slate-400 hover:text-white font-mono active:scale-95 transition"
+                          >
+                            Reset Data
+                          </button>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Trigger a print block for all outstanding customers
+                              const printWindow = window.open("", "_blank");
+                              if (printWindow) {
+                                const dueCustomers = sales.filter(s => (s.amountDue || 0) > 0);
+                                const totalAmt = dueCustomers.reduce((sum, s) => sum + (s.amountDue || 0), 0);
+                                printWindow.document.write(`
+                                  <html>
+                                    <head>
+                                      <title>Ledger Summary Report</title>
+                                      <style>
+                                        body { font-family: monospace; padding: 20px; background: #fff; color: #000; }
+                                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                        th { background: #f2f2f2; }
+                                        h2 { text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 5px; }
+                                      </style>
+                                    </head>
+                                    <body onload="window.print()">
+                                      <h2>SHAIE ALAM LIVESTOCK CO. - COLLECTION RECEIVABLES REPORT</h2>
+                                      <p>Date Generated: ${new Date().toLocaleDateString()}</p>
+                                      <p>Total Receivables ("You will get"): <strong>₹${totalAmt.toLocaleString()}</strong></p>
+                                      <table>
+                                        <thead>
+                                          <tr>
+                                            <th>Code</th>
+                                            <th>Customer Name</th>
+                                            <th>Phone Number</th>
+                                            <th>Outstanding Balance</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          ${dueCustomers.map(c => `
+                                            <tr>
+                                              <td>${c.customerCode || "N/A"}</td>
+                                              <td>${c.customerName}</td>
+                                              <td>${c.customerPhone}</td>
+                                              <td>₹${(c.amountDue || 0).toLocaleString()}</td>
+                                            </tr>
+                                          `).join("")}
+                                        </tbody>
+                                      </table>
+                                    </body>
+                                  </html>
+                                `);
+                                printWindow.document.close();
+                              }
+                            }}
+                            className="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition select-none active:scale-95 cursor-pointer"
+                          >
+                            <Receipt className="h-3.5 w-3.5 text-teal-400" />
+                            View Reports
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -6443,7 +8191,7 @@ _Empowered by ShaieAlam ERP Systems_`;
                                   </div>
                                   <div className="text-right flex flex-col items-end">
                                     <p className="text-xs font-mono font-bold text-teal-400">₹{c.totalSpent.toLocaleString()}</p>
-                                    <span className="text-[8px] text-slate-500 font-mono uppercase mt-1">Total Spent</span>
+                                    <span className="text-[8px] text-slate-505 font-mono uppercase mt-1">Total Spent</span>
                                   </div>
                                 </div>
                               );
@@ -6453,96 +8201,600 @@ _Empowered by ShaieAlam ERP Systems_`;
                       </div>
 
                       {/* Right Column: Detailed Transaction Ledger Sheets */}
-                      <div className="lg:col-span-2">
+                      <div className="lg:col-span-2 space-y-6">
                         {(() => {
                           if (!selectedTrackerCode) {
                             return (
-                              <div className="h-full min-h-[400px] flex flex-col items-center justify-center p-8 bg-slate-950 border border-slate-800 rounded-3xl text-center">
-                                <div className="h-16 w-16 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center mb-4 text-teal-400">
-                                  <BookOpen className="h-8 w-8 text-teal-400" />
-                                </div>
-                                <h4 className="text-sm font-bold text-white">Select a Customer Account</h4>
-                                <p className="text-xs text-slate-500 max-w-sm mt-1 mx-auto leading-relaxed">
-                                  Click on any customer card from the register directory, or search by name list/code to inspect their full historical sales invoice and installment tracking book ledger.
+                              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-8 text-center flex flex-col items-center justify-center min-h-[400px]">
+                                <Users className="h-12 w-12 text-slate-600 mb-3 opacity-40" />
+                                <h4 className="text-sm font-bold text-slate-300 font-mono uppercase">LIVESTOCK PARTNER CENTRAL</h4>
+                                <p className="text-xs text-slate-500 max-w-xs mt-1">
+                                  Select a customer or supplier from the list on the left to inspect detailed billing statements, log dynamic cash collections, or schedule reminders.
                                 </p>
                               </div>
                             );
                           }
 
-                          // Gather matched customer sales
-                          const customerSales = sales.filter(s => s.customerCode === selectedTrackerCode);
+                          // 1. Resolve Target Profile Dets
+                          const customerSales = sales.filter(s => {
+                            if (s.customerCode === selectedTrackerCode) return true;
+                            const selectionKey = `${s.customerName.toLowerCase()}_${s.customerPhone}`;
+                            if (selectionKey === selectedTrackerCode.toLowerCase()) return true;
+                            if (s.customerName.toLowerCase() === selectedTrackerCode.toLowerCase()) return true;
+                            return false;
+                          });
 
-                          if (customerSales.length === 0) {
-                            return (
-                              <div className="h-full min-h-[400px] flex flex-col items-center justify-center p-8 bg-slate-950 border border-slate-800 rounded-3xl text-center">
-                                <div className="h-12 w-12 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center mb-3">
-                                  <AlertTriangle className="h-6 w-6 text-amber-500 animate-pulse" />
-                                </div>
-                                <h4 className="text-sm font-bold text-white">No historical transactions</h4>
-                                <p className="text-xs text-slate-500 max-w-sm mt-1 mx-auto">
-                                  No records found for code "{selectedTrackerCode}".
-                                </p>
-                              </div>
-                            );
+                          let targetName = "";
+                          let targetPhone = "N/A";
+                          let targetCode = selectedTrackerCode;
+
+                          if (customerSales.length > 0) {
+                            targetName = customerSales[0].customerName;
+                            targetPhone = customerSales[0].customerPhone;
+                            targetCode = customerSales[0].customerCode || targetCode;
+                          } else {
+                            // Sourcing owner search
+                            const matchedAnimal = animals.find(a => a.owner && a.owner.toLowerCase() === selectedTrackerCode.toLowerCase());
+                            if (matchedAnimal) {
+                              targetName = matchedAnimal.owner;
+                              targetPhone = "N/A";
+                              targetCode = "N/A";
+                            } else {
+                              targetName = selectedTrackerCode;
+                            }
                           }
 
-                          const targetName = customerSales[0].customerName;
-                          const targetPhone = customerSales[0].customerPhone;
-                          const grandTotalBilled = customerSales.reduce((acc, s) => acc + s.totalAmount, 0);
-                          const grandTotalPaid = customerSales.reduce((acc, s) => acc + (s.amountPaid !== undefined ? s.amountPaid : s.totalAmount), 0);
-                          const grandTotalOutstanding = customerSales.reduce((acc, s) => acc + (s.amountDue !== undefined ? s.amountDue : 0), 0);
+                          // 2. Build complete virtual chronological ledger matrix
+                          const ledgerRows: Array<{
+                            id: string;
+                            dateStr: string;
+                            type: "GAVE" | "GOT";
+                            notes: string;
+                            amount: number;
+                            runningBalance: number;
+                          }> = [];
+
+                          // Sale debits & partial payment credits
+                          customerSales.forEach(sale => {
+                            ledgerRows.push({
+                              id: `${sale.id}-DEBIT`,
+                              dateStr: sale.date,
+                              type: "GAVE",
+                              notes: sale.items.map(it => `${it.type} (${it.weightKg}kg)`).join(", ") || "Credit invoice purchase",
+                              amount: sale.totalAmount,
+                              runningBalance: 0
+                            });
+
+                            if (sale.installments) {
+                              sale.installments.forEach(inst => {
+                                ledgerRows.push({
+                                  id: inst.id,
+                                  dateStr: inst.date,
+                                  type: "GOT",
+                                  notes: inst.notes || "Recorded collection installment credit payoff",
+                                  amount: inst.amount,
+                                  runningBalance: 0
+                                });
+                              });
+                            }
+                          });
+
+                          // Butcher dispatches portion sales 
+                          butcherDispatches.forEach(disp => {
+                            if (disp.portionSales) {
+                              const customerPortions = disp.portionSales.filter(p => {
+                                if (p.customerCode === selectedTrackerCode) return true;
+                                const selectionKey = `${p.customerName.toLowerCase()}_${p.customerPhone}`;
+                                if (selectionKey === selectedTrackerCode.toLowerCase()) return true;
+                                if (p.customerName.toLowerCase() === selectedTrackerCode.toLowerCase()) return true;
+                                return false;
+                              });
+
+                              customerPortions.forEach(p => {
+                                ledgerRows.push({
+                                  id: `${p.id}-PORTION`,
+                                  dateStr: p.date || disp.slaughterDate || disp.dispatchDate || "",
+                                  type: "GAVE",
+                                  notes: `Portion dispatch: ${p.weightKg}kg Meat transfer`,
+                                  amount: p.totalAmount,
+                                  runningBalance: 0
+                                });
+
+                                if (p.amountPaid > 0) {
+                                  ledgerRows.push({
+                                    id: `${p.id}-PORTION-PAY`,
+                                    dateStr: p.date || disp.slaughterDate || disp.dispatchDate || "",
+                                    type: "GOT",
+                                    notes: `Portion dispatch downpayment received`,
+                                    amount: p.amountPaid,
+                                    runningBalance: 0
+                                  });
+                                }
+                              });
+                            }
+                          });
+
+                          // Suppliers sourcing credit (where we owe supplier, represented as negative due)
+                          const matchedSupplierAnimals = animals.filter(a => a.owner && a.owner.toLowerCase() === targetName.toLowerCase());
+                          matchedSupplierAnimals.forEach(a => {
+                            if (a.due > 0) {
+                              ledgerRows.push({
+                                id: `${a.id}-SOURCING-DUE`,
+                                dateStr: a.dateAdded,
+                                type: "GOT", // Sourcing animal is money they gave us
+                                notes: `Sourced livestock head ${a.id} (${a.type} - ${a.breed})`,
+                                amount: a.due,
+                                runningBalance: 0
+                              });
+                            }
+                          });
+
+                          // Sort chronologically
+                          const sortedLedgerRows = ledgerRows.sort((a,b) => a.dateStr.localeCompare(b.dateStr));
+
+                          // Apply running balance additions/subtractions
+                          let rBl = 0;
+                          sortedLedgerRows.forEach(row => {
+                            if (row.type === "GAVE") {
+                              rBl += row.amount;
+                            } else {
+                              rBl -= row.amount;
+                            }
+                            row.runningBalance = rBl;
+                          });
+
+                          const netOutstanding = rBl;
+                          const displayLedgerRows = [...sortedLedgerRows].reverse();
 
                           return (
-                            <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 space-y-6">
+                            <>
+                              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 space-y-5 shadow-2xl relative flex flex-col">
                               
-                              {/* Profile card summary header */}
-                              <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b border-slate-800">
+                              {/* Top Profile block (Screenshot 2 Format) */}
+                              <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b border-slate-800/80">
                                 <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-mono font-black text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-xl uppercase tracking-wider">
-                                      Customer Code {selectedTrackerCode}
-                                    </span>
-                                    <span className="text-xs font-mono text-slate-400 px-2.5 py-1 bg-slate-900 rounded-xl">
-                                      {customerSales.length} Transactions
+                                  <span className="text-[10px] font-mono font-black text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2.5 py-0.5 rounded-lg uppercase tracking-wider">
+                                    Customer Account ledger
+                                  </span>
+                                  <h4 className="text-base font-black text-white mt-1.5 font-mono uppercase tracking-wide">
+                                    {targetName}
+                                  </h4>
+                                  <p className="text-xs text-slate-550 font-mono mt-0.5">Cell: {targetPhone} • Ref ID: {targetCode}</p>
+                                </div>
+                                <div className="text-right bg-slate-900 border border-slate-800 rounded-2xl p-3 w-full sm:w-auto">
+                                  <span className="text-[9px] uppercase font-mono font-bold tracking-widest text-rose-500 block">
+                                    You will get (আপনার পাওনা)
+                                  </span>
+                                  <span className="text-2xl font-black text-rose-500 font-mono block mt-0.5">
+                                    ₹{netOutstanding.toLocaleString()}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Set collection reminder Ribbon (Screenshot 2 Format) */}
+                              <div className="p-3.5 bg-slate-900/60 border border-slate-800/60 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4 text-blue-400 animate-pulse" />
+                                  <div>
+                                    <span className="text-xs font-semibold text-white block">Collection follow up due date</span>
+                                    <span className="text-[10px] text-slate-505 font-mono">
+                                      {customerSales[0].dueDate ? `Scheduled for: ${customerSales[0].dueDate}` : "No follow-up reminder date assigned"}
                                     </span>
                                   </div>
-                                  <h4 className="text-lg font-black text-white mt-2 font-mono uppercase">{targetName}</h4>
-                                  <p className="text-xs text-slate-400 font-mono mt-0.5">Phone: {targetPhone}</p>
                                 </div>
-                                <div className="bg-slate-900/60 p-3 rounded-2xl border border-slate-800 text-right w-full sm:w-auto">
-                                  <span className="text-[10px] text-slate-550 block">Outstanding Balance</span>
-                                  <span className={`text-xl font-bold font-mono mt-1 block ${grandTotalOutstanding > 0 ? "text-amber-500 animate-pulse" : "text-green-500"}`}>
-                                    ₹{grandTotalOutstanding.toLocaleString()}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Mini Bento Metrics bar */}
-                              <div className="grid grid-cols-3 gap-4">
-                                <div className="bg-slate-900/40 p-3 h-20 flex flex-col justify-between rounded-2xl border border-slate-800">
-                                  <span className="text-[9px] text-slate-500 font-mono uppercase font-semibold">Total Billed</span>
-                                  <span className="text-sm font-black text-white font-mono">₹{grandTotalBilled.toLocaleString()}</span>
-                                </div>
-                                <div className="bg-slate-900/40 p-3 h-20 flex flex-col justify-between rounded-2xl border border-slate-800">
-                                  <span className="text-[9px] text-slate-500 font-mono uppercase font-semibold">Total Paid</span>
-                                  <span className="text-sm font-black text-emerald-400 font-mono font-mono">₹{grandTotalPaid.toLocaleString()}</span>
-                                </div>
-                                <div className="bg-slate-900/40 p-3 h-20 flex flex-col justify-between rounded-2xl border border-slate-800">
-                                  <span className="text-[9px] text-slate-500 font-mono uppercase font-semibold">Debt Ratio</span>
-                                  <span className="text-sm font-black text-slate-400 font-mono font-mono">
-                                    {grandTotalBilled > 0 ? Math.round((grandTotalOutstanding / grandTotalBilled) * 100) : 0}%
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Ledger items list */}
-                              <div className="space-y-4">
-                                <h5 className="text-xs font-black text-slate-300 uppercase tracking-wider font-mono">
-                                  Historical Transaction Vouchers
-                                </h5>
                                 
-                                <div className="space-y-3.5 max-h-[450px] overflow-y-auto pr-1">
-                                  {customerSales.map(sale => {
+                                <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
+                                  {dateReminderSettingId === targetCode ? (
+                                    <div className="flex items-center gap-1.5">
+                                      <input
+                                        type="date"
+                                        value={reminderSelectedDate}
+                                        onChange={(e) => {
+                                          setReminderSelectedDate(e.target.value);
+                                          // Update dueDate on matching customer sales live!
+                                          setSales(prev => prev.map(s => {
+                                            if (s.customerCode === targetCode) {
+                                              return { ...s, dueDate: e.target.value };
+                                            }
+                                            return s;
+                                          }));
+                                          setDateReminderSettingId(null);
+                                          alert(`Collection dues reminder rescheduled to ${e.target.value} successfully.`);
+                                        }}
+                                        className="bg-slate-950 border border-slate-800 text-xs px-2 py-1.5 rounded-lg text-white font-mono focus:outline-none focus:border-blue-400"
+                                      />
+                                      <button
+                                        onClick={() => setDateReminderSettingId(null)}
+                                        className="text-[10px] text-red-400 font-bold hover:underline font-mono"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setDateReminderSettingId(targetCode);
+                                        setReminderSelectedDate(customerSales[0].dueDate || new Date().toISOString().split("T")[0]);
+                                      }}
+                                      className="px-3 py-1 bg-slate-950 hover:bg-slate-900 border border-slate-700 rounded-xl text-[10px] font-black text-white hover:text-blue-300 transition cursor-pointer select-none"
+                                    >
+                                      SET DATE
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Quick interactive Actions deck (Screenshot 2 Buttons bar) */}
+                              <div className="grid grid-cols-3 gap-3 border-y border-slate-800/60 py-2.5">
+                                {/* Print single statement */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const printWindow = window.open("", "_blank");
+                                    if (printWindow) {
+                                      printWindow.document.write(`
+                                        <html>
+                                          <head>
+                                            <title>Statement of Account - ${targetName}</title>
+                                            <style>
+                                              body { font-family: monospace; padding: 25px; line-height: 1.4; color:#000;background:#fff;}
+                                              .hed { border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 15px;}
+                                              table { width: 100%; border-collapse: collapse; margin-top: 20px;}
+                                              th, td { border: 1px solid #ccc; padding: 8px; text-align: left;}
+                                              th { background: #f2f2f2; }
+                                              .bold { font-weight: bold;}
+                                            </style>
+                                          </head>
+                                          <body onload="window.print()">
+                                            <div class="hed">
+                                              <h2>STATEMENT OF HEALTH / TRANSACTION RECORD</h2>
+                                              <p><strong>Customer:</strong> ${targetName}</p>
+                                              <p><strong>Contact cell:</strong> ${targetPhone}</p>
+                                              <p><strong>Ref Code:</strong> ${targetCode}</p>
+                                            </div>
+                                            <p>Outstanding Unsettled Balance (You will get): <strong>₹${netOutstanding.toLocaleString()}</strong></p>
+                                            <table>
+                                              <thead>
+                                                <tr>
+                                                  <th>Date Logged</th>
+                                                  <th>Entry Type</th>
+                                                  <th>Detailed Description</th>
+                                                  <th>YOU GAVE (Debit)</th>
+                                                  <th>YOU GOT (Credit)</th>
+                                                  <th>Running Balance</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                                ${ledgerRows.map(row => `
+                                                  <tr>
+                                                    <td>${new Date(row.dateStr).toLocaleDateString()} ${row.dateStr.includes("T") ? new Date(row.dateStr).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ""}</td>
+                                                    <td><strong>${row.type}</strong></td>
+                                                    <td>${row.notes}</td>
+                                                    <td>${row.type === "GAVE" ? `₹${row.amount.toLocaleString()}` : "-"}</td>
+                                                    <td>${row.type === "GOT" ? `₹${row.amount.toLocaleString()}` : "-"}</td>
+                                                    <td><strong>₹${row.runningBalance.toLocaleString()}</strong></td>
+                                                  </tr>
+                                                `).join("")}
+                                              </tbody>
+                                            </table>
+                                          </body>
+                                        </html>
+                                      `);
+                                      printWindow.document.close();
+                                    }
+                                  }}
+                                  className="py-2.5 px-3 bg-slate-900 border border-slate-800 hover:bg-slate-850 hover:border-slate-700 text-slate-300 rounded-2xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition select-none active:scale-95 cursor-pointer"
+                                >
+                                  <Printer className="h-4 w-4 text-emerald-400" />
+                                  <span>Report</span>
+                                </button>
+
+                                {/* Pre-form WhatsApp Text reminder */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const rawMessage = `Dear ${targetName}, your outstanding collections ledger statement under Shaie Alam Livestock stands at ₹${netOutstanding.toLocaleString()}. Please arrange split payment at your earliest convenience. Thank you!`;
+                                    const encoded = encodeURIComponent(rawMessage);
+                                    window.open(`https://wa.me/${targetPhone.replace(/[^0-9]/g, "")}?text=${encoded}`, "_blank");
+                                  }}
+                                  className="py-2.5 px-3 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-2xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition select-none active:scale-95 cursor-pointer"
+                                >
+                                  <Smartphone className="h-4 w-4 text-emerald-400 animate-pulse" />
+                                  <span>Reminder</span>
+                                </button>
+
+                                {/* SMS Template helper popup */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const template = `[SMS SMS] SHAIE ALAM LIVESTOCK CO:\nDear ${targetName}, outstanding balance is ₹${netOutstanding.toLocaleString()}. Settle easily via bKash or cash. Link: sh-alam.com/dues/${targetCode}`;
+                                    alert(`Prepared SMS Broadcast Packet for customer cellular router:\n\n${template}`);
+                                  }}
+                                  className="py-2.5 px-3 bg-blue-500/10 border border-blue-500/25 hover:bg-blue-500/20 hover:border-blue-500/40 text-blue-400 rounded-2xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition select-none active:scale-95 cursor-pointer"
+                                >
+                                  <MessageSquare className="h-4 w-4 text-blue-400" />
+                                  <span>SMS</span>
+                                </button>
+                              </div>
+
+                              {/* Interactive Inline Forms for giving / getting logs */}
+                              <div className="space-y-3">
+                                {/* YOU GAVE credit addition form */}
+                                {showGaveForm && (
+                                  <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-2xl space-y-3 animate-slideDown">
+                                    <div className="flex justify-between items-center pb-2 border-b border-rose-500/10">
+                                      <h5 className="text-xs font-black text-rose-400 uppercase font-mono">
+                                        🔴 Log Credit Entry (YOU GAVE GOODS / আপনি উধার দিয়েছেন)
+                                      </h5>
+                                      <button onClick={() => setShowGaveForm(false)} className="text-slate-500 hover:text-white text-[10px] font-mono">✕ Close</button>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                      <div className="space-y-1">
+                                        <label className="block text-[9px] text-slate-400 uppercase font-mono">Credit Amount (₹)</label>
+                                        <input
+                                          type="number"
+                                          placeholder="₹ amount"
+                                          value={gaveAmount}
+                                          onChange={(e) => setGaveAmount(e.target.value)}
+                                          className="w-full bg-slate-950 border border-rose-500/20 rounded-lg p-2 text-xs font-mono focus:outline-none focus:border-rose-500 text-white placeholder-slate-600"
+                                        />
+                                      </div>
+                                      <div className="space-y-1 sm:col-span-2">
+                                        <label className="block text-[9px] text-slate-400 uppercase font-mono">Detailed Description (items, cuts, weights)</label>
+                                        <input
+                                          type="text"
+                                          placeholder="e.g. 5kg Bovine cuts, special rib pack"
+                                          value={gaveDescription}
+                                          onChange={(e) => setGaveDescription(e.target.value)}
+                                          className="w-full bg-slate-950 border border-rose-500/20 rounded-lg p-2 text-xs focus:outline-none focus:border-rose-500 text-white placeholder-slate-600"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="flex justify-end gap-2 pt-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (!gaveAmount || Number(gaveAmount) <= 0) {
+                                            alert("Please enter a valid credit quantity amount.");
+                                            return;
+                                          }
+                                          const numAmt = Number(gaveAmount);
+                                          const timestampStr = new Date().toISOString();
+                                          const newSaleObj: Sale = {
+                                            id: `SALE-${Math.floor(1001 + Math.random() * 8999)}`,
+                                            customerName: targetName,
+                                            customerPhone: targetPhone,
+                                            customerCode: targetCode,
+                                            items: [{ type: gaveDescription || "Direct Credit Sale", weightKg: 1, ratePerKg: numAmt, amount: numAmt }],
+                                            totalAmount: numAmt,
+                                            paymentMethod: "Due",
+                                            date: timestampStr,
+                                            amountPaid: 0,
+                                            amountDue: numAmt,
+                                            dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+                                            installments: []
+                                          };
+                                          setSales(prev => [newSaleObj, ...prev]);
+                                          // Clear fields
+                                          setGaveAmount("");
+                                          setGaveDescription("");
+                                          setShowGaveForm(false);
+                                          recordOfflineChange(`Logged credit balance account additions (₹${numAmt}) to ${targetName}`);
+                                        }}
+                                        className="px-4 py-1.5 bg-rose-500 text-slate-955 text-xs font-black rounded-xl active:scale-95 transition cursor-pointer"
+                                      >
+                                        Save Log
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* YOU GOT payment recording form */}
+                                {showGotForm && (
+                                  <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl space-y-3 animate-slideDown">
+                                    <div className="flex justify-between items-center pb-2 border-b border-emerald-500/10">
+                                      <h5 className="text-xs font-black text-emerald-400 uppercase font-mono">
+                                        🟢 Log Collection/Payment Entry (YOU GOT CASH / টাকা আদায় হয়েছে)
+                                      </h5>
+                                      <button onClick={() => setShowGotForm(false)} className="text-slate-500 hover:text-white text-[10px] font-mono">✕ Close</button>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                      <div className="space-y-1">
+                                        <label className="block text-[9px] text-slate-400 uppercase font-mono">Collected (₹)</label>
+                                        <input
+                                          type="number"
+                                          placeholder="Settle amount"
+                                          value={gotAmount}
+                                          onChange={(e) => setGotAmount(e.target.value)}
+                                          className="w-full bg-slate-955 border border-emerald-500/25 rounded-lg p-2 text-xs font-mono focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600"
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="block text-[9px] text-slate-400 uppercase font-mono">Channel</label>
+                                        <select
+                                          value={gotPaymentMethod}
+                                          onChange={(e: any) => setGotPaymentMethod(e.target.value)}
+                                          className="w-full bg-slate-955 border border-emerald-500/25 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                                        >
+                                          <option value="Cash">💵 Cash</option>
+                                          <option value="bKash">📱 bKash</option>
+                                          <option value="Card">💳 Card</option>
+                                        </select>
+                                      </div>
+                                      <div className="space-y-1 sm:col-span-2">
+                                        <label className="block text-[9px] text-slate-400 uppercase font-mono">Notes / Remarks</label>
+                                        <input
+                                          type="text"
+                                          placeholder="e.g. Settle partial beef credit"
+                                          value={gotDescription}
+                                          onChange={(e) => setGotDescription(e.target.value)}
+                                          className="w-full bg-slate-955 border border-emerald-500/25 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500 text-white placeholder-slate-600"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="flex justify-end gap-2 pt-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (!gotAmount || Number(gotAmount) <= 0) {
+                                            alert("Please state a valid collected cash amount.");
+                                            return;
+                                          }
+                                          const settleAmtNum = Number(gotAmount);
+                                          let runningPayoff = settleAmtNum;
+                                          const localToday = new Date().toISOString().split("T")[0];
+
+                                          // Distribute collected payments chronologically over matching due transactions
+                                          setSales(prevSales => {
+                                            return prevSales.map(sale => {
+                                              const isThisCustomer = sale.customerCode === targetCode;
+                                              if (isThisCustomer && runningPayoff > 0) {
+                                                const currentDue = sale.amountDue || 0;
+                                                if (currentDue > 0) {
+                                                  const portionSettle = Math.min(currentDue, runningPayoff);
+                                                  runningPayoff -= portionSettle;
+                                                  const newDue = currentDue - portionSettle;
+                                                  const newInst: Installment = {
+                                                    id: `INST-${Math.floor(1001 + Math.random() * 8999)}`,
+                                                    date: localToday,
+                                                    amount: portionSettle,
+                                                    paymentMethod: gotPaymentMethod,
+                                                    notes: gotDescription || "Split installment callback payment",
+                                                    collectionNotes: gotDescription || "Split installment callback payment"
+                                                  };
+                                                  
+                                                  // Increase general cash reserves
+                                                  setCashBalance(prev => prev + portionSettle);
+
+                                                  return {
+                                                    ...sale,
+                                                    amountPaid: (sale.amountPaid || 0) + portionSettle,
+                                                    amountDue: newDue,
+                                                    installments: [...(sale.installments || []), newInst]
+                                                  };
+                                                }
+                                              }
+                                              return sale;
+                                            });
+                                          });
+
+                                          alert(`Distributed ₹${settleAmtNum.toLocaleString()} payment over outstanding debit vouchers for ${targetName}`);
+                                          setGotAmount("");
+                                          setGotDescription("");
+                                          setShowGotForm(false);
+                                          recordOfflineChange(`Registered payment payoff collection (₹${settleAmtNum}) for ${targetName}`);
+                                        }}
+                                        className="px-4 py-1.5 bg-emerald-500 text-slate-955 text-xs font-black rounded-xl active:scale-95 transition cursor-pointer"
+                                      >
+                                        Save Log
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Entries Table layout (Screenshot 2 Format) */}
+                              <div className="space-y-3.5">
+                                <div className="flex justify-between items-center text-xs text-slate-400 font-mono font-bold tracking-wide border-b border-slate-900 pb-2">
+                                  <span>ENTRIES REGISTER (লেনদেন বিবরণী)</span>
+                                  <div className="flex gap-14 pr-8 uppercase tracking-widest text-[9px]">
+                                    <span className="text-rose-400 font-bold">You Gave</span>
+                                    <span className="text-emerald-400 font-bold">You Got</span>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                                  {sortedLedgerRows.map(row => {
+                                    const rawD = new Date(row.dateStr);
+                                    const dateOptions: any = { day: '2-digit', month: 'short', year: '2-digit' };
+                                    const timeOptions: any = { hour: '2-digit', minute: '2-digit', hour12: true };
+                                    const formattedDate = !isNaN(rawD.getTime()) 
+                                      ? `${rawD.toLocaleDateString('en-GB', dateOptions)} • ${rawD.toLocaleTimeString('en-US', timeOptions)}`
+                                      : row.dateStr;
+
+                                    return (
+                                      <div key={row.id} className="p-3 bg-slate-900/40 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 rounded-2xl flex items-center justify-between gap-4 transition-all duration-155">
+                                        <div className="space-y-1.5 text-left min-w-0 flex-1">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-[10px] text-slate-300 font-mono font-semibold">
+                                              {formattedDate}
+                                            </span>
+                                          </div>
+                                          
+                                          <p className="text-[10px] text-slate-500 font-mono truncate max-w-[200px] sm:max-w-xs" title={row.notes}>
+                                            📚 {row.notes}
+                                          </p>
+
+                                          <div className="inline-block bg-slate-950 border border-slate-900 text-slate-400 px-2 py-0.5 rounded-lg text-[9px] font-mono">
+                                            Bal. ₹{row.runningBalance.toLocaleString()}
+                                          </div>
+                                        </div>
+
+                                        <div className="flex gap-4 shrink-0 items-center justify-end w-36 sm:w-44 pr-1 text-right">
+                                          <div className="w-16 sm:w-20 text-center">
+                                            {row.type === "GAVE" ? (
+                                              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 px-2.5 py-1 rounded-xl text-xs font-black font-mono">
+                                                ₹{row.amount.toLocaleString()}
+                                              </div>
+                                            ) : (
+                                              <span className="text-slate-800 font-mono">-</span>
+                                            )}
+                                          </div>
+
+                                          <div className="w-16 sm:w-20 text-center">
+                                            {row.type === "GOT" ? (
+                                              <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2.5 py-1 rounded-xl text-xs font-black font-mono">
+                                                ₹{row.amount.toLocaleString()}
+                                              </div>
+                                            ) : (
+                                              <span className="text-slate-800 font-mono">-</span>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3.5 pt-3 border-t border-slate-900">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowGaveForm(true);
+                                    setShowGotForm(false);
+                                  }}
+                                  className="py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition active:scale-95 shadow-lg select-none cursor-pointer"
+                                >
+                                  🔴 YOU GAVE ₹
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowGotForm(true);
+                                    setShowGaveForm(false);
+                                  }}
+                                  className="py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition active:scale-95 shadow-lg select-none cursor-pointer"
+                                >
+                                  🟢 YOU GOT ₹
+                                </button>
+                              </div>
+
+                            </div>
+
+                            {/* Historical Original Invoice Dues Matrix */}
+                            <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 space-y-4">
+                              <h4 className="text-sm font-black text-white uppercase font-mono tracking-wider border-b border-slate-900 pb-2 flex items-center gap-1.5">
+                                <Receipt className="h-4 w-4 text-emerald-400" />
+                                Original Dues & Invoice Vouchers
+                              </h4>
+                              <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1">
+                                {customerSales.length === 0 ? (
+                                  <p className="text-xs text-slate-500 italic font-mono text-center py-6">No matching retail billing counter invoices.</p>
+                                ) : (
+                                  customerSales.map(sale => {
                                     const paidAmt = sale.amountPaid !== undefined ? sale.amountPaid : sale.totalAmount;
                                     const dueAmt = sale.amountDue !== undefined ? sale.amountDue : 0;
                                     return (
@@ -6563,7 +8815,7 @@ _Empowered by ShaieAlam ERP Systems_`;
                                           </div>
                                           <div className="text-right">
                                             <span className="text-sm font-bold text-teal-400 font-mono">₹{sale.totalAmount.toLocaleString()}</span>
-                                            <span className="text-[9px] text-slate-500 font-mono block mt-1 uppercase font-semibold">{sale.paymentMethod}</span>
+                                            <span className="text-[9px] text-slate-505 font-mono block mt-1 uppercase font-semibold">{sale.paymentMethod}</span>
                                           </div>
                                         </div>
 
@@ -6602,7 +8854,7 @@ _Empowered by ShaieAlam ERP Systems_`;
                                         {/* Historical installment schedules */}
                                         {sale.installments && sale.installments.length > 0 && (
                                           <div className="bg-slate-950 p-3 rounded-xl border border-slate-900 mt-2 space-y-2">
-                                            <span className="text-[9px] text-slate-500 uppercase font-black tracking-wide block">
+                                            <span className="text-[9px] text-slate-505 uppercase font-black tracking-wide block">
                                               📑 Instalment History Matrix ({sale.installments.length} logs)
                                             </span>
                                             <div className="space-y-1.5">
@@ -6617,12 +8869,14 @@ _Empowered by ShaieAlam ERP Systems_`;
                                         )}
                                       </div>
                                     );
-                                  })}
-                                </div>
+                                  })
+                                )}
                               </div>
                             </div>
-                          );
-                        })()}
+
+                          </>
+                        );
+                      })()}
                       </div>
 
                     </div>
@@ -7721,6 +9975,465 @@ _Empowered by ShaieAlam ERP Systems_`;
 
       {/* DIALOG DICTIONARY MODALS */}
 
+      {/* INVESTMENT CALCULATOR MODAL */}
+      {showInvestmentCalcModal && (
+        <div id="investment-calculator-modal" className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-4xl w-full max-h-[92vh] overflow-y-auto space-y-6 shadow-2xl">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="h-10 w-10 bg-teal-500/10 rounded-xl flex items-center justify-center border border-teal-500/20">
+                  <Calculator className="h-5.5 w-5.5 text-teal-400 font-bold" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-white leading-normal">
+                    Herd Capital Investment & Growth Profit Calculator
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Simulate nutrition-driven mass accrual, feeding regimens, and projected commercial returns.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowInvestmentCalcModal(false)} 
+                className="text-slate-400 hover:text-white p-2 hover:bg-slate-800 rounded-xl transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Calculator Body GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-xs text-slate-300">
+              
+              {/* Left Column: Parameter Inputs (Col span 5) */}
+              <div className="lg:col-span-5 space-y-5 border-r border-slate-800/60 pr-0 lg:pr-6">
+                <div id="calc-inputs" className="space-y-4">
+                  <h5 className="text-[11px] font-black uppercase text-teal-400 tracking-wider font-mono">
+                    1. Growth & Asset Baseline
+                  </h5>
+
+                  {/* Animal Type Selector */}
+                  <div>
+                    <label className="block text-slate-400 uppercase text-[9px] font-bold tracking-wider mb-1">Livestock Class</label>
+                    <div className="grid grid-cols-3 gap-1.5 bg-slate-950 p-1 rounded-xl">
+                      {["Cow", "Goat", "Buffalo"].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => {
+                            setCalcAnimalType(t);
+                            // auto-tune parameters depending on type
+                            if (t === "Goat") {
+                              setCalcInitialWeight(25);
+                              setCalcPurchasePrice(8500);
+                              setCalcDailyWeightGain(0.15);
+                              setCalcDailyFeedCost(25);
+                              setCalcMedicineCost(805);
+                              setCalcOtherCosts(500);
+                              setCalcDressingPercent(48);
+                              setCalcProjectedMeatPrice(750);
+                              setCalcProjectedByproducts(850);
+                            } else if (t === "Buffalo") {
+                              setCalcInitialWeight(320);
+                              setCalcPurchasePrice(85000);
+                              setCalcDailyWeightGain(0.9);
+                              setCalcDailyFeedCost(180);
+                              setCalcMedicineCost(3500);
+                              setCalcOtherCosts(2500);
+                              setCalcDressingPercent(50);
+                              setCalcProjectedByproducts(6500);
+                            } else {
+                              setCalcInitialWeight(220);
+                              setCalcPurchasePrice(55000);
+                              setCalcDailyWeightGain(0.75);
+                              setCalcDailyFeedCost(140);
+                              setCalcMedicineCost(2500);
+                              setCalcOtherCosts(1800);
+                              setCalcDressingPercent(52);
+                              setCalcProjectedByproducts(4505);
+                            }
+                          }}
+                          className={`py-1.5 rounded-lg text-center font-bold text-[10px] uppercase transition ${
+                            calcAnimalType === t 
+                              ? "bg-teal-500 text-slate-950 font-black" 
+                              : "text-slate-400 hover:text-white hover:bg-slate-900"
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Baseline Parameters Input Row */}
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-slate-400 uppercase text-[9px] font-bold tracking-wider mb-1">
+                        Initial Weight (Kg)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="1200"
+                        value={calcInitialWeight}
+                        onChange={(e) => setCalcInitialWeight(Number(e.target.value) || 0)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:border-teal-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 uppercase text-[9px] font-bold tracking-wider mb-1">
+                        Purchase Cost (৳)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={calcPurchasePrice}
+                        onChange={(e) => setCalcPurchasePrice(Number(e.target.value) || 0)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:border-teal-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Growth Duration Range */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-slate-400 uppercase text-[9px] font-bold tracking-wider">
+                        Growth Period (Weeks)
+                      </label>
+                      <span className="text-teal-400 font-mono font-bold">{calcGrowthWeeks} Weeks ({calcGrowthWeeks * 7} Days)</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="4"
+                      max="52"
+                      step="4"
+                      value={calcGrowthWeeks}
+                      onChange={(e) => setCalcGrowthWeeks(Number(e.target.value))}
+                      className="w-full h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-teal-500"
+                    />
+                    <div className="flex justify-between text-[8px] text-slate-500 font-mono px-0.5 mt-1">
+                      <span>4W (1mo)</span>
+                      <span>24W (6mo)</span>
+                      <span>52W (1yr)</span>
+                    </div>
+                  </div>
+
+                  <hr className="border-slate-800/65" />
+
+                  <h5 className="text-[11px] font-black uppercase text-teal-400 tracking-wider font-mono">
+                    2. Nutrition & Feed Scenarios
+                  </h5>
+
+                  {/* Feed Quality Presets */}
+                  <div>
+                    <label className="block text-slate-400 uppercase text-[9px] font-bold tracking-wider mb-1.5">
+                      Operational Rations Preset
+                    </label>
+                    <div className="space-y-1.5">
+                      {[
+                        {
+                          id: "grazing",
+                          name: "Low-Cost Free Grazing",
+                          desc: "Mainly grass. Slow weight gain, micro overhead.",
+                          gain: calcAnimalType === "Goat" ? 0.08 : calcAnimalType === "Buffalo" ? 0.5 : 0.4,
+                          feedCost: calcAnimalType === "Goat" ? 10 : calcAnimalType === "Buffalo" ? 80 : 60,
+                        },
+                        {
+                          id: "standard",
+                          name: "Standard Concentrates",
+                          desc: "Daily straw, wheat bran & standard concentrates.",
+                          gain: calcAnimalType === "Goat" ? 0.15 : calcAnimalType === "Buffalo" ? 0.9 : 0.75,
+                          feedCost: calcAnimalType === "Goat" ? 25 : calcAnimalType === "Buffalo" ? 180 : 140,
+                        },
+                        {
+                          id: "premium",
+                          name: "High-Protein Premium Feed",
+                          desc: "Commercial silage, corn meals, mineral blocks.",
+                          gain: calcAnimalType === "Goat" ? 0.22 : calcAnimalType === "Buffalo" ? 1.3 : 1.1,
+                          feedCost: calcAnimalType === "Goat" ? 45 : calcAnimalType === "Buffalo" ? 280 : 220,
+                        }
+                      ].map((preset) => {
+                        const isSelected = Math.abs(calcDailyFeedCost - preset.feedCost) < 5 && Math.abs(calcDailyWeightGain - preset.gain) < 0.05;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => {
+                              setCalcDailyWeightGain(preset.gain);
+                              setCalcDailyFeedCost(preset.feedCost);
+                            }}
+                            className={`w-full text-left p-2 rounded-xl transition border text-[10px] leading-tight flex justify-between items-center ${
+                              isSelected 
+                                ? "bg-teal-500/10 border-teal-500/35 text-teal-300" 
+                                : "bg-slate-950 border-slate-850 hover:border-slate-800 text-slate-400"
+                            }`}
+                          >
+                            <div className="max-w-[70%] text-left">
+                              <p className="font-bold text-white">{preset.name}</p>
+                              <p className="text-[8px] text-slate-500 font-sans mt-0.5">{preset.desc}</p>
+                            </div>
+                            <div className="text-right font-mono">
+                              <p className="text-teal-400 font-bold">+{preset.gain} Kg/day</p>
+                              <p className="text-[9px] text-slate-500 font-black">৳{preset.feedCost}/day</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Manual Override Slider for feed cost & gains */}
+                  <div className="grid grid-cols-2 gap-3 bg-slate-950/45 p-2.5 rounded-xl border border-slate-850/80">
+                    <div>
+                      <label className="block text-slate-400 uppercase text-[8px] mb-0.5 font-bold">
+                        Daily Feed Cost (৳)
+                      </label>
+                      <input
+                        type="number"
+                        value={calcDailyFeedCost}
+                        onChange={(e) => setCalcDailyFeedCost(Number(e.target.value) || 0)}
+                        className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-white font-mono focus:border-teal-500 outline-none text-[10px]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 uppercase text-[8px] mb-0.5 font-bold">
+                        Avg Weight Gain (Kg/day)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={calcDailyWeightGain}
+                        onChange={(e) => setCalcDailyWeightGain(Number(e.target.value) || 0)}
+                        className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-white font-mono focus:border-teal-500 outline-none text-[10px]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Outcomes & Metrics Displays (Col span 7) */}
+              <div className="lg:col-span-7 flex flex-col justify-between space-y-5">
+                
+                {/* Math Calculations */}
+                {(() => {
+                  const totalDays = calcGrowthWeeks * 7;
+                  const totalFeedCost = totalDays * calcDailyFeedCost;
+                  const totalInvestment = calcPurchasePrice + totalFeedCost + calcMedicineCost + calcOtherCosts;
+                  
+                  const weightAcquired = totalDays * calcDailyWeightGain;
+                  const finalWeight = calcInitialWeight + weightAcquired;
+                  const dressingWeight = finalWeight * (calcDressingPercent / 100);
+                  
+                  const usableMeatRevenues = dressingWeight * calcProjectedMeatPrice;
+                  const totalRevenues = usableMeatRevenues + calcProjectedByproducts;
+                  
+                  const netProfit = totalRevenues - totalInvestment;
+                  const percentageROI = totalInvestment > 0 ? (netProfit / totalInvestment) * 100 : 0;
+                  const isProfit = netProfit >= 0;
+
+                  return (
+                    <div className="space-y-5 flex-1">
+                      
+                      {/* Interactive Live Metrics Bento Grid */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-slate-950 border border-slate-850 rounded-2xl p-3 flex flex-col justify-between">
+                          <p className="text-[9px] uppercase tracking-wider text-slate-500 font-bold font-sans">Final Total Weight</p>
+                          <div className="mt-1">
+                            <span className="text-xl font-black font-mono text-teal-400">{finalWeight.toFixed(1)}</span>
+                            <span className="text-[9px] text-slate-500 font-bold uppercase ml-0.5">Kg</span>
+                          </div>
+                          <p className="text-[8px] text-slate-400 mt-1 font-mono font-sans">
+                            +{weightAcquired.toFixed(1)} Kg gain ({totalDays} days)
+                          </p>
+                        </div>
+
+                        <div className="bg-slate-950 border border-slate-850 rounded-2xl p-3 flex flex-col justify-between">
+                          <p className="text-[9px] uppercase tracking-wider text-slate-500 font-bold font-sans">Dressing Yield</p>
+                          <div className="mt-1">
+                            <span className="text-xl font-black font-mono text-teal-300">{dressingWeight.toFixed(1)}</span>
+                            <span className="text-[9px] text-slate-500 font-bold uppercase ml-0.5">Kg</span>
+                          </div>
+                          <p className="text-[8px] text-slate-400 mt-1 font-mono font-sans">
+                            At {calcDressingPercent}% dressing ratio
+                          </p>
+                        </div>
+
+                        <div className="bg-slate-950 border border-slate-850 rounded-2xl p-3 flex flex-col justify-between">
+                          <p className="text-[9px] uppercase tracking-wider text-slate-500 font-bold font-sans">Total Operation Cost</p>
+                          <div className="mt-1">
+                            <span className="text-xl font-black font-mono text-white">৳{Math.round(totalFeedCost).toLocaleString()}</span>
+                          </div>
+                          <p className="text-[8px] text-slate-400 mt-1 font-mono font-sans text-amber-400">
+                            Feed: ৳{totalFeedCost.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Main ROI Impact Banner Card */}
+                      <div className={`rounded-3xl p-4 border flex items-center justify-between gap-4 shadow-lg ${
+                        isProfit 
+                          ? "bg-slate-950 border-emerald-500/20 text-emerald-400 shadow-emerald-950/5" 
+                          : "bg-slate-950 border-rose-500/20 text-rose-400 shadow-rose-950/5"
+                      }`}>
+                        <div className="space-y-1">
+                          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Projected Net Returns</p>
+                          <div className="flex items-baseline gap-1.5 flex-wrap">
+                            <span className={`text-3xl font-black font-mono ${isProfit ? "text-emerald-400" : "text-rose-400"}`}>
+                              ৳{isProfit ? "+" : ""}{Math.round(netProfit).toLocaleString()}
+                            </span>
+                            <span className="text-[10px] text-slate-505 font-bold font-sans uppercase">Net profit</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 font-mono text-[9px] leading-tight text-slate-400">
+                            <span>Total Outlay: ৳{Math.round(totalInvestment).toLocaleString()}</span>
+                            <span>•</span>
+                            <span>Gross Rev: ৳{Math.round(totalRevenues).toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        <div className={`px-4 py-2.5 rounded-2xl border text-center shrink-0 min-w-[90px] ${
+                          isProfit 
+                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" 
+                            : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+                        }`}>
+                          <p className="text-[8px] uppercase font-black tracking-widest font-sans opacity-75">ROI Rate</p>
+                          <p className="text-xl font-bold font-mono mt-0.5">{percentageROI.toFixed(1)}%</p>
+                        </div>
+                      </div>
+
+                      {/* Commercial Modeling Details */}
+                      <div className="grid grid-cols-2 gap-4 bg-slate-950/30 p-3.5 border border-slate-850/80 rounded-2xl">
+                        <div className="space-y-3">
+                          <h6 className="text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-850/60 pb-1 font-mono">
+                            Revenues Breakdown
+                          </h6>
+                          <div className="space-y-1.5 text-[11px] font-mono p-0.5 font-sans">
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Boneless Meat Yield:</span>
+                              <span className="text-white">৳{Math.round(usableMeatRevenues).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500" title="Includes leather hide, bones & organic fertilizer value">Byproducts & Hides:</span>
+                              <span className="text-white">৳{calcProjectedByproducts.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between border-t border-slate-850/50 pt-1 text-teal-400 font-extrabold text-[11px]">
+                              <span>Gross Revenue:</span>
+                              <span>৳{Math.round(totalRevenues).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <h6 className="text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-850/60 pb-1 font-mono">
+                            Expenditure Breakdown
+                          </h6>
+                          <div className="space-y-1.5 text-[11px] font-mono p-0.5 font-sans">
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Purchase Cost:</span>
+                              <span className="text-white">৳{calcPurchasePrice.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Feeding Overheads:</span>
+                              <span className="text-teal-400">৳{totalFeedCost.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Vet & Medicines:</span>
+                              <span className="text-white">৳{calcMedicineCost.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between border-t border-slate-850/50 pt-1 text-slate-400 font-extrabold text-[11px]">
+                              <span>Total Capital Outlay:</span>
+                              <span>৳{Math.round(totalInvestment).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Yield Fine-Tuning controls */}
+                      <div className="grid grid-cols-3 gap-3 bg-slate-950/20 p-2.5 rounded-xl border border-slate-850/50">
+                        <div>
+                          <label className="block text-slate-500 uppercase text-[8px] mb-0.5 font-bold">Dressing %</label>
+                          <input
+                            type="number"
+                            value={calcDressingPercent}
+                            onChange={(e) => setCalcDressingPercent(Number(e.target.value) || 0)}
+                            className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-white font-mono text-[10px]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 uppercase text-[8px] mb-0.5 font-bold">Projected Meat ৳/kg</label>
+                          <input
+                            type="number"
+                            value={calcProjectedMeatPrice}
+                            onChange={(e) => setCalcProjectedMeatPrice(Number(e.target.value) || 0)}
+                            className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-white font-mono text-[10px]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 uppercase text-[8px] mb-0.5 font-bold font-sans">Skin/Dung Val ৳</label>
+                          <input
+                            type="number"
+                            value={calcProjectedByproducts}
+                            onChange={(e) => setCalcProjectedByproducts(Number(e.target.value) || 0)}
+                            className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-1 text-white font-mono text-[10px]"
+                          />
+                        </div>
+                      </div>
+
+                    </div>
+                  );
+                })()}
+
+                {/* Simulated Pricing Action Bar */}
+                <div className="border-t border-slate-800/60 pt-4 flex gap-3.5 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowInvestmentCalcModal(false)}
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer"
+                  >
+                    Dismiss Simulator
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Apply computed statistics model back to the livestock creation state
+                      const totalDays = calcGrowthWeeks * 7;
+                      const totalFeed = totalDays * calcDailyFeedCost;
+                      const weightGain = totalDays * calcDailyWeightGain;
+                      const finalEstimatedWeight = calcInitialWeight + weightGain;
+
+                      setNewAnimal(prev => ({
+                        ...prev,
+                        type: calcAnimalType as any,
+                        weightKg: Math.round(finalEstimatedWeight),
+                        purchasePrice: calcPurchasePrice,
+                        feedType: calcDailyFeedCost > 200 ? "Premium Feed (Silage)" : "Standard Concentrates",
+                        feedCost: totalFeed,
+                        medicineCost: calcMedicineCost,
+                        maintenanceCost: calcOtherCosts,
+                        notes: `Simulated with growth model: +${calcDailyWeightGain} Kg/day over ${calcGrowthWeeks} weeks. Est. Initial Weight: ${calcInitialWeight} Kg.`
+                      }));
+                      
+                      setShowInvestmentCalcModal(false);
+                      // If Add Animal Modal is not open, trigger it so user can complete finalizing!
+                      if (!showAddAnimalModal) {
+                        setShowAddAnimalModal(true);
+                      }
+                    }}
+                    className="bg-teal-500 hover:bg-teal-400 text-slate-950 font-black px-5 py-2 rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5 select-none shadow-md shadow-teal-500/10"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    Apply Model to Purchase Draft
+                  </button>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* Modal 1: Add Animal Purchase Custom Sheet */}
       {showAddAnimalModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -7735,6 +10448,30 @@ _Empowered by ShaieAlam ERP Systems_`;
 
             <form onSubmit={handleAddAnimal} className="space-y-4 text-xs">
               
+              {/* Investment Optimizer Simulator integration */}
+              <div className="bg-teal-500/10 border border-teal-500/15 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-md">
+                <div className="flex items-center gap-2">
+                  <Calculator className="h-4.5 w-4.5 text-teal-400 shrink-0" />
+                  <div>
+                    <div className="text-[11px] font-extrabold text-teal-300">Investment Profit Calculator</div>
+                    <div className="text-[9px] text-slate-400">Simulate projected weight growth & feed cost scenarios.</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    openInvestmentCalculator(
+                      newAnimal.type || "Cow",
+                      newAnimal.weightKg || 220,
+                      newAnimal.purchasePrice || 45000
+                    );
+                  }}
+                  className="bg-teal-500 hover:bg-teal-400 text-slate-950 font-black px-2.5 py-1.5 rounded-xl text-[9px] uppercase tracking-wide transition flex items-center gap-1 shrink-0 select-none shadow"
+                >
+                  <TrendingUp className="h-3 w-3" />
+                  Simulate Profits
+                </button>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 uppercase mb-1">Animal Class</label>
