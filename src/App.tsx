@@ -8,7 +8,7 @@ import {
   AlertCircle, Moon, Sun, AlertTriangle, FileText, CheckCircle, 
   Smartphone, Camera, Download, Upload, HelpCircle, Eye, ShoppingCart, 
   ChevronRight, ChevronDown, Calendar, UserCheck, Egg, Lock, ShieldAlert,
-  Settings, Info, Bell, Facebook, Twitter, Linkedin, Github, Database
+  Settings, Info, Bell, Facebook, Twitter, Linkedin, Github, Database, SlidersHorizontal
 } from "lucide-react";
 import { 
   LineChart as RechartLineChart, 
@@ -1107,6 +1107,8 @@ export default function App() {
   const [typeFilter, setTypeFilter] = useState("All");
   const [animalOwnerFilter, setAnimalOwnerFilter] = useState("All");
   const [animalPaymentStatusFilter, setAnimalPaymentStatusFilter] = useState("All");
+  const [minWeightFilter, setMinWeightFilter] = useState<number>(0);
+  const [maxWeightFilter, setMaxWeightFilter] = useState<number>(1200);
 
   const [poultrySearchQuery, setPoultrySearchQuery] = useState("");
   const [poultryTypeFilter, setPoultryTypeFilter] = useState("All");
@@ -1169,6 +1171,7 @@ export default function App() {
   // Bulk CSV import & sitemap modal states
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   const [bulkImportErrorLog, setBulkImportErrorLog] = useState<string[]>([]);
+  const [bulkImportErrorReport, setBulkImportErrorReport] = useState<Array<{ row: number; column: string; error: string; invalidValue: string }>>([]);
   const [isCsvDragging, setIsCsvDragging] = useState(false);
   const [showSitemapModal, setShowSitemapModal] = useState(false);
   const [sitemapActiveTab, setSitemapActiveTab] = useState<"map" | "terms">("map");
@@ -3231,6 +3234,14 @@ export default function App() {
     alert(lang === "bn" ? "✓ ব্রান্ডেড পোল্ট্রি পিডিএফ লেজার সফলভাবে ডাউনলোড করা হয়েছে।" : "✓ Automated branded A4 PDF Poultry Ledger generated and exported.");
   };
 
+  // Validation utility checking for 'QR_VALIDATED' metadata field on imported livestock records
+  const checkQRValidationStatus = (animal: Animal): { isValid: boolean; warningMsg?: string } => {
+    if (animal.qr_validated === false) {
+      return { isValid: false, warningMsg: lang === "bn" ? "কিউআর যাচাই এবং ভিজ্যুয়াল সারিবদ্ধকরণ ব্যর্থ হয়েছে" : "Failed visual alignment / QR verification check" };
+    }
+    return { isValid: true };
+  };
+
   // Bulk CSV Livestock import handler with extensive schema validation
   const handleCSVImport = (text: string) => {
     const lines = text.split(/\r?\n/);
@@ -3256,6 +3267,7 @@ export default function App() {
     const advanceIdx = getIdx(["advance", "paid", "অগ্রিম"]);
     const ownerIdx = getIdx(["owner", "supplier", "সরবরাহকারী"]);
     const notesIdx = getIdx(["notes", "remark", "দ্রষ্টব্য"]);
+    const qrValidatedIdx = getIdx(["qr_validated", "qr validated", "qr_validate", "qr", "qr-validated"]);
 
     // Strictly validate that mandatory headers exist
     const missingHeaders: string[] = [];
@@ -3272,12 +3284,22 @@ export default function App() {
         `Requirement: The CSV file MUST define columns representing "Type", "Breed", "Age" and "Weight".`
       ];
       setBulkImportErrorLog(errs);
+      setBulkImportErrorReport([
+        {
+          row: 1,
+          column: "Header Row",
+          error: `Missing mandatory columns: ${missingHeaders.join(", ")}`,
+          invalidValue: lines[0]
+        }
+      ]);
       alert(`⚠️ CSV Validation Failed:\nMissing mandatory columns: ${missingHeaders.join(", ")}`);
       return;
     }
 
     const parsedAnimals: Animal[] = [];
     const errors: string[] = [];
+    const errorRecords: Array<{ row: number; column: string; error: string; invalidValue: string }> = [];
+
     let nextIdNumber = (() => {
       let maxNum = 0;
       animals.forEach(ani => {
@@ -3298,7 +3320,14 @@ export default function App() {
 
       const cols = line.split(',').map(c => c.trim());
       if (cols.length < Math.max(typeIdx, breedIdx, ageIdx, weightIdx) + 1) {
-        errors.push(`Row ${i + 1}: Insufficient column count (requires at least Type, Breed, Age, Weight columns).`);
+        const errMsg = `Row ${i + 1}: Insufficient column count (requires at least Type, Breed, Age, Weight columns).`;
+        errors.push(errMsg);
+        errorRecords.push({
+          row: i + 1,
+          column: "Row Columns Count",
+          error: "Row does not have enough columns corresponding to indices",
+          invalidValue: line
+        });
         continue;
       }
 
@@ -3310,39 +3339,84 @@ export default function App() {
       const advanceRaw = advanceIdx !== -1 ? cols[advanceIdx] : "0";
       const owner = ownerIdx !== -1 ? cols[ownerIdx] : "CSV Bulk Import";
       const notes = notesIdx !== -1 ? cols[notesIdx] : "";
+      const qrRaw = qrValidatedIdx !== -1 ? cols[qrValidatedIdx] : "";
 
       // Required fields validation
       if (!type) {
         errors.push(`Row ${i + 1}: Animal Type (Species) is required.`);
+        errorRecords.push({
+          row: i + 1,
+          column: "Type (Species)",
+          error: "Animal Type (Species) is empty or missing",
+          invalidValue: type
+        });
         continue;
       }
       if (!breed) {
         errors.push(`Row ${i + 1}: Breed type is required.`);
+        errorRecords.push({
+          row: i + 1,
+          column: "Breed",
+          error: "Breed value is empty or missing",
+          invalidValue: breed
+        });
         continue;
       }
 
       const age = Number(ageRaw);
       if (isNaN(age) || age <= 0) {
         errors.push(`Row ${i + 1}: Age months "${ageRaw}" must be a valid positive number.`);
+        errorRecords.push({
+          row: i + 1,
+          column: "Age",
+          error: "Age months must be a valid positive number",
+          invalidValue: ageRaw
+        });
         continue;
       }
 
       const weight = Number(weightRaw);
       if (isNaN(weight) || weight <= 0) {
         errors.push(`Row ${i + 1}: Weight "${weightRaw}" must be a valid positive number.`);
+        errorRecords.push({
+          row: i + 1,
+          column: "Weight",
+          error: "Weight must be a valid positive number in kilograms",
+          invalidValue: weightRaw
+        });
         continue;
       }
 
       const price = Number(priceRaw);
       if (isNaN(price) || price < 0) {
         errors.push(`Row ${i + 1}: Price "${priceRaw}" must be a valid non-negative number.`);
+        errorRecords.push({
+          row: i + 1,
+          column: "Price",
+          error: "Purchase price must be a valid non-negative number",
+          invalidValue: priceRaw
+        });
         continue;
       }
 
       const advance = Number(advanceRaw);
       if (isNaN(advance) || advance < 0) {
         errors.push(`Row ${i + 1}: Advance "${advanceRaw}" must be a valid non-negative number.`);
+        errorRecords.push({
+          row: i + 1,
+          column: "Advance",
+          error: "Advance paid must be a valid non-negative number",
+          invalidValue: advanceRaw
+        });
         continue;
+      }
+
+      let qr_validated_status = true;
+      if (qrValidatedIdx !== -1 && qrRaw) {
+        const checkVal = qrRaw.toLowerCase();
+        if (checkVal === "false" || checkVal === "0" || checkVal === "no" || checkVal === "n" || checkVal === "fail" || checkVal === "failed") {
+          qr_validated_status = false;
+        }
       }
 
       const newId = `ANI-${String(nextIdNumber).padStart(3, "0")}`;
@@ -3362,13 +3436,15 @@ export default function App() {
         weightHistory: [
           { date: formattedDate, weightKg: weight }
         ],
-        notes: notes || "Batch imported via CSV directory ledger."
+        notes: notes || "Batch imported via CSV directory ledger.",
+        qr_validated: qr_validated_status
       });
     }
 
     if (errors.length > 0) {
       setBulkImportErrorLog(errors);
-      alert(`⚠️ Validation errors found across ${errors.length} rows. Please review errors list before continuing.`);
+      setBulkImportErrorReport(errorRecords);
+      alert(`⚠️ Validation errors found across ${errors.length} rows. Please review errors list and download the detailed Error Report.`);
       return;
     }
 
@@ -3402,15 +3478,38 @@ export default function App() {
       setTransactions(prev => [...newTxns, ...prev]);
     }
 
+    // Reset error states on success
+    setBulkImportErrorLog([]);
+    setBulkImportErrorReport([]);
+
     addAuditLog(
       "Bulk Import Complete",
       "Livestock",
       `Bulk imported ${parsedAnimals.length} cattle records from CSV file correctly.`
     );
 
-    setBulkImportErrorLog([]);
+    alert(lang === "bn" ? `✓ ${parsedAnimals.length} টি গবাদি পশু সিএসভি বাল্ক সফলভাবে আমদানী করা হয়েছে!` : `✓ Successfully batch-imported ${parsedAnimals.length} livestock records via cloud file CSV directory ledger!`);
     setShowBulkImportModal(false);
-    alert(`✓ Successfully registered ${parsedAnimals.length} new animals into livestock register and processed payment transactions!`);
+  };
+
+  const downloadErrorReportCSV = () => {
+    if (bulkImportErrorReport.length === 0) return;
+    
+    const headers = "Row,Column,Error Description,Invalid Value Provided\n";
+    const bodyObj = bulkImportErrorReport.map(err => {
+      const escapedError = `"${err.error.replace(/"/g, '""')}"`;
+      const escapedValue = `"${err.invalidValue.replace(/"/g, '""')}"`;
+      const escapedColumn = `"${err.column.replace(/"/g, '""')}"`;
+      return `${err.row},${escapedColumn},${escapedError},${escapedValue}`;
+    }).join("\n");
+    
+    const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(headers + bodyObj);
+    const link = document.createElement("a");
+    link.setAttribute("href", csvContent);
+    link.setAttribute("download", `livestock_import_error_report_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   // Download active filtered animal directory as CSV with proper UTF-8 BOM encoding for Bengali characters
@@ -3632,6 +3731,9 @@ export default function App() {
       );
     }
 
+    // Weight range slider filter
+    result = result.filter(ani => ani.weightKg >= minWeightFilter && ani.weightKg <= maxWeightFilter);
+
     // Advanced Animal Sorting
     if (animalSortField) {
       result.sort((a, b) => {
@@ -3651,7 +3753,7 @@ export default function App() {
     }
 
     return result;
-  }, [animals, typeFilter, searchQuery, animalSortField, animalSortOrder, animalOwnerFilter, animalPaymentStatusFilter]);
+  }, [animals, typeFilter, searchQuery, animalSortField, animalSortOrder, animalOwnerFilter, animalPaymentStatusFilter, minWeightFilter, maxWeightFilter]);
 
   // Bulk Selection & Row Expansion Helpers
   const isAllSelected = useMemo(() => {
@@ -4679,6 +4781,71 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Advanced Search & Weight Filter Slider */}
+                <div className="bg-slate-900/40 border border-slate-900/60 p-4 rounded-2xl space-y-3 no-print">
+                  <div className="flex items-center justify-between border-b border-slate-800/40 pb-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-wider text-teal-400 font-mono flex items-center gap-1.5">
+                      <SlidersHorizontal className="h-3.5 w-3.5 text-teal-500" />
+                      <span>{lang === "bn" ? "উন্নত ফিল্টারিং ও ওজন সীমা" : "Advanced Filtering (Weight Range / ওজন)"}</span>
+                    </h4>
+                    <button
+                      onClick={() => {
+                        setMinWeightFilter(0);
+                        setMaxWeightFilter(1200);
+                      }}
+                      className="text-[9px] font-mono font-bold text-slate-400 hover:text-white hover:underline transition cursor-pointer"
+                    >
+                      {lang === "bn" ? "রিসেট করুন" : "Reset Filter"}
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
+                    {/* Min Weight Selector */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px] font-mono font-bold">
+                        <span className="text-slate-400">{lang === "bn" ? "সর্বনিম্ন ওজন (Min Weight):" : "Min Weight Capacity:"}</span>
+                        <span className="text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/15">{minWeightFilter} kg</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1200"
+                        step="5"
+                        value={minWeightFilter}
+                        onChange={(e) => setMinWeightFilter(Number(e.target.value))}
+                        className="w-full accent-teal-500 bg-slate-950 h-1.5 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[8px] text-slate-500 font-mono">
+                        <span>0 kg</span>
+                        <span>600 kg</span>
+                        <span>1200 / Max kg</span>
+                      </div>
+                    </div>
+
+                    {/* Max Weight Selector */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px] font-mono font-bold">
+                        <span className="text-slate-400">{lang === "bn" ? "সর্বোচ্চ ওজন (Max Weight):" : "Max Weight Capacity:"}</span>
+                        <span className="text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/15">{maxWeightFilter} kg</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1200"
+                        step="5"
+                        value={maxWeightFilter}
+                        onChange={(e) => setMaxWeightFilter(Number(e.target.value))}
+                        className="w-full accent-teal-500 bg-slate-950 h-1.5 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[8px] text-slate-500 font-mono">
+                        <span>0 kg</span>
+                        <span>600 kg</span>
+                        <span>1200 / Max kg</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Bulk Actions Panel */}
                 {selectedCount > 0 && (
                   <div className="bg-teal-500/10 border border-teal-500/30 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn no-print">
@@ -4797,13 +4964,22 @@ export default function App() {
                         {processedFilteredAnimals.map(ani => {
                           const isSelected = !!selectedAnimalIds[ani.id];
                           const isExpanded = !!expandedAnimalIds[ani.id];
+                          const qrCheck = checkQRValidationStatus(ani);
+                          const isFailedQR = !qrCheck.isValid;
+
                           return (
                             <React.Fragment key={ani.id}>
                               <tr className={`hover:bg-slate-950/65 transition-colors duration-100 ${isExpanded ? "bg-slate-950/40" : ""} ${
-                                ani.status === "Overdue" || ani.status === "Critical" ? "border-l-4 border-l-red-500" : ""
+                                isFailedQR 
+                                  ? "bg-rose-950/15 border-l-4 border-l-rose-500 shadow-[inset_1px_0_0_0_#ef4444]" 
+                                  : ani.status === "Overdue" || ani.status === "Critical" 
+                                    ? "border-l-4 border-l-red-500" 
+                                    : ""
                               }`}>
                                 <td className={`p-4 text-center no-print ${
-                                  ani.status === "Overdue" || ani.status === "Critical" ? "border-l-4 border-l-red-500 bg-red-500/5 text-center" : ""
+                                  isFailedQR
+                                    ? "bg-rose-950/10"
+                                    : ani.status === "Overdue" || ani.status === "Critical" ? "border-l-4 border-l-red-500 bg-red-500/5 text-center" : ""
                                 }`}>
                                   <input
                                     type="checkbox"
@@ -4814,7 +4990,7 @@ export default function App() {
                                 </td>
                                 <td 
                                   onClick={() => toggleRowExpand(ani.id)}
-                                  className="p-4 font-mono font-black text-white flex items-center gap-1.5 cursor-pointer hover:text-teal-400 select-none"
+                                  className="p-4 font-mono font-black text-white flex flex-wrap items-center gap-1.5 cursor-pointer hover:text-teal-400 select-none"
                                 >
                                   {isExpanded ? (
                                     <ChevronDown className="h-3 w-3 text-teal-500 shrink-0" />
@@ -4822,6 +4998,15 @@ export default function App() {
                                     <ChevronRight className="h-3 w-3 text-slate-500 shrink-0" />
                                   )}
                                   <span>{ani.id}</span>
+                                  {isFailedQR && (
+                                    <span 
+                                      className="inline-flex items-center gap-0.5 text-[8px] font-mono font-black tracking-tighter bg-rose-500/15 border border-rose-500/30 text-rose-400 px-1 py-0.5 rounded uppercase shrink-0 animate-pulse"
+                                      title={qrCheck.warningMsg}
+                                    >
+                                      <AlertTriangle className="h-2 w-2 text-rose-500 shrink-0" />
+                                      QR ERR
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="p-4 font-bold">{ani.type}</td>
                                 <td className="p-4 text-slate-400">{ani.breed}</td>
@@ -8249,10 +8434,23 @@ export default function App() {
               {/* Errors logs list if found */}
               {bulkImportErrorLog.length > 0 && (
                 <div className="space-y-1.5 bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl text-left">
-                  <h4 className="text-[10px] font-black uppercase text-rose-400 flex items-center gap-1 font-mono">
-                    <AlertTriangle className="h-3.5 w-3.5" />
-                    Validation Errors ({bulkImportErrorLog.length} found)
-                  </h4>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rose-500/15 pb-1.5 mb-1">
+                    <h4 className="text-[10px] font-black uppercase text-rose-400 flex items-center gap-1 font-mono">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      Validation Errors ({bulkImportErrorLog.length} found)
+                    </h4>
+                    {bulkImportErrorReport.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={downloadErrorReportCSV}
+                        className="text-[9.5px] font-mono font-black text-rose-100 hover:text-white bg-rose-600/30 hover:bg-rose-600/60 border border-rose-500/40 px-2 py-0.5 rounded transition cursor-pointer flex items-center gap-1"
+                        title="Download official CSV error ledger listing each row, column, expected rules and culprit value"
+                      >
+                        <Download className="h-2.5 w-2.5" />
+                        <span>Download Error Report (CSV)</span>
+                      </button>
+                    )}
+                  </div>
                   <div className="max-h-36 overflow-y-auto space-y-1 text-[9.5px] font-mono text-rose-300 divide-y divide-rose-500/15">
                     {bulkImportErrorLog.map((err, idx) => (
                       <p key={idx} className="pt-1">{err}</p>

@@ -21,6 +21,7 @@ export interface Animal {
   notes?: string;
   insuranceClaimAmount?: number;
   mortalityDate?: string;
+  qr_validated?: boolean;
 }
 
 export interface SaleItem {
