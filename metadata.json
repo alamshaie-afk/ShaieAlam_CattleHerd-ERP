@@ -2,7 +2,8 @@
   "name": "ShaieAlam LiveStock ERP",
   "description": "Offline-ready livestock investment and meat retail ERP with smart profit forecasts and Bengali language support.",
   "requestFramePermissions": [
-    "geolocation"
+    "geolocation",
+    "camera"
   ],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

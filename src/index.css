@@ -1,34 +1,330 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,650;0,800;1,400&display=swap');
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@400;500;700;850&family=Space+Grotesk:wght@400;500;700&family=Outfit:wght@400;500;700;900&display=swap');
 
-@theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  
-  /* Additional fine details */
-  --color-brand-teal-light: #2dd4bf;
-  --color-brand-teal: #0d9488;
-  --color-brand-teal-dark: #0f766e;
+/* Font Family Overrides */
+.font-space {
+  font-family: 'Space Grotesk', -apple-system, sans-serif !important;
+}
+.font-outfit {
+  font-family: 'Outfit', -apple-system, sans-serif !important;
+}
+.font-mono {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+.font-sans {
+  font-family: 'Inter', -apple-system, sans-serif !important;
 }
 
-/* Base custom styles to polished perfection */
-body {
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  background-color: #0b1329; /* Deep executive rich navy/midnight background instead of standard flat slate */
+/* Font sizing scales */
+.size-sm, 
+.size-sm button, 
+.size-sm span, 
+.size-sm input, 
+.size-sm select, 
+.size-sm textarea,
+.size-sm h1, 
+.size-sm h2, 
+.size-sm h3, 
+.size-sm h4, 
+.size-sm td, 
+.size-sm th, 
+.size-sm p {
+  font-size: 91% !important;
 }
 
-/* Custom scrollbar to keep layout pristine */
+.size-normal {
+  /* standard scale */
+}
+
+.size-lg, 
+.size-lg button, 
+.size-lg span, 
+.size-lg input, 
+.size-lg select, 
+.size-lg textarea,
+.size-lg h1, 
+.size-lg h2, 
+.size-lg h3, 
+.size-lg h4, 
+.size-lg td, 
+.size-lg th, 
+.size-lg p {
+  font-size: 110% !important;
+}
+
+@layer base {
+  body {
+    background-color: #020617; /* slate-950 */
+    color: #f1f5f9; /* slate-100 */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.4);
+  background: #020617;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.2);
-  border-radius: 9999px;
+  background: #1e293b;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(45, 212, 191, 0.4);
+  background: #334155;
+}
+
+/* Specific styling for high-contrast light theme */
+.light-theme {
+  background-color: #f8fafc !important; /* slate-50 */
+  color: #0f172a !important; /* slate-900 */
+}
+
+.light-theme .bg-slate-950,
+.light-theme .bg-slate-900,
+.light-theme .text-slate-100,
+.light-theme .text-slate-200 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.light-theme .bg-slate-900\/60,
+.light-theme .bg-slate-950\/60,
+.light-theme .bg-slate-900\/80,
+.light-theme .bg-slate-900\/30,
+.light-theme .bg-[#070d1e],
+.light-theme .bg-[#101935] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-theme .bg-slate-800,
+.light-theme .bg-slate-850,
+.light-theme .bg-slate-900\/50 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light-theme h1,
+.light-theme h2,
+.light-theme h3,
+.light-theme h4,
+.light-theme h5,
+.light-theme h6,
+.light-theme p,
+.light-theme span,
+.light-theme label,
+.light-theme td,
+.light-theme th,
+.light-theme div:not([class*="bg-teal"]):not([class*="bg-emerald"]):not([class*="bg-amber"]):not([class*="bg-rose"]):not([class*="bg-sky"]):not([class*="bg-[#"]):not([class*="text-teal"]):not([class*="text-emerald"]):not([class*="text-rose"]):not([class*="text-amber"]) {
+  color: #0f172a !important;
+}
+
+.light-theme .text-white {
+  color: #0f172a !important;
+}
+
+.light-theme .text-slate-400,
+.light-theme .text-slate-500 {
+  color: #64748b !important;
+}
+
+.light-theme .text-slate-300 {
+  color: #334155 !important;
+}
+
+.light-theme .border-slate-800,
+.light-theme .border-slate-850,
+.light-theme .border-slate-900,
+.light-theme .border-slate-800\/60,
+.light-theme .border-teal-500\/10 {
+  border-color: #cbd5e1 !important;
+}
+
+.light-theme select,
+.light-theme input,
+.light-theme textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* D3 Chart Hover Styles */
+.chart-tooltip {
+  transition: all 0.1s ease-out;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   ADVANCED @media print BLOCK FOR CLEAN PRINTING OF LEDGERS AND RECEIPTS
+   ========================================================================== */
+@media print {
+  /* Apply global print defaults */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 11pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Automatically hide components that pollute printable outputs */
+  .no-print,
+  #theme-toggle,
+  .sidebar,
+  .navigation,
+  .nav-tabs,
+  .fab-btn,
+  .filter-bar,
+  .pagination,
+  .modal-close,
+  button:not(.print-btn),
+  input,
+  select,
+  textarea,
+  iframe,
+  header:not(.print-header),
+  nav,
+  aside,
+  .toast-container,
+  .alert-banner {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Optimize layout for full-width print canvas */
+  main, #root, .app-container {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Printable Core Document Styling */
+  .printable-area {
+    display: block !important;
+    visibility: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 15mm !important;
+    box-shadow: none !important;
+    border: none !important;
+    position: static !important;
+  }
+
+  /* Print Header styling */
+  .print-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-bottom: 2px solid #334155 !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 25px !important;
+  }
+
+  .print-only {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* Table configurations to avoid content clipping on paper */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 15px 0 !important;
+    page-break-inside: auto !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  th, td {
+    padding: 8px 10px !important;
+    border: 1px solid #64748b !important;
+    text-align: left !important;
+    font-size: 9.5pt !important;
+    color: #000000 !important;
+    background: transparent !important;
+  }
+
+  th {
+    font-weight: bold !important;
+    background-color: #f1f5f9 !important;
+    border-bottom: 2px solid #334155 !important;
+  }
+
+  /* Clean, crisp styling for invoice values and status labels when printed */
+  .print-badge {
+    border: 1px solid #475569 !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-weight: bold !important;
+    font-size: 8pt !important;
+    color: #000000 !important;
+    background: transparent !important;
+    text-transform: uppercase !important;
+  }
+
+  /* Grid adjustments for standard single-column document printing */
+  .grid {
+    display: block !important;
+  }
+
+  .grid > * {
+    margin-bottom: 15px !important;
+    width: 100% !important;
+  }
+
+  /* Metric block overrides to prevent dark backgrounds when printing */
+  .print-metric-box {
+    border: 1px solid #cbd5e1 !important;
+    background: #f8fafc !important;
+    padding: 10px 15px !important;
+    border-radius: 8px !important;
+    margin-bottom: 15px !important;
+  }
 }

@@ -3,6 +3,7 @@
   "appId": "1:366119518665:web:21280c3e9656ae2dfb2818",
   "apiKey": "AIzaSyAP54mqXy-Z6En6frU7g4vkXpwnI0zmafg",
   "authDomain": "quadratic-gantry-1szp9.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-1b6a6789-35e5-45bd-96b5-65bbb71a7f58",
   "storageBucket": "quadratic-gantry-1szp9.firebasestorage.app",
   "messagingSenderId": "366119518665",
   "measurementId": ""
