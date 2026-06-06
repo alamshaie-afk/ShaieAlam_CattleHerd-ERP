@@ -5,6 +5,14 @@ export interface WeightHistoryItem {
 
 export type AnimalStatus = "Pending" | "Active" | "Processed" | "Mortality" | "Overdue" | "Sold" | "Paid" | "Partially Paid" | "Critical";
 
+export interface LivestockHealthLog {
+  id: string;
+  date: string;
+  vaccinationDate?: string;
+  symptoms: string;
+  vetNotes: string;
+}
+
 export interface Animal {
   id: string; // e.g., ANI-001
   type: string; // e.g., "Cow" | "Goat" | "Sheep" | "Buffalo" | "Mithun"
@@ -22,6 +30,9 @@ export interface Animal {
   insuranceClaimAmount?: number;
   mortalityDate?: string;
   qr_validated?: boolean;
+  healthLogs?: LivestockHealthLog[];
+  purchaseDate?: string;
+  sellerContact?: string;
 }
 
 export interface SaleItem {
@@ -71,16 +82,55 @@ export interface Transaction {
   date: string;
   description: string;
   referenceId?: string; // e.g., animalId or invoiceId
-  department?: "Livestock" | "Poultry" | "Butcher" | "Collections" | "Feed";
+  department?: "Livestock" | "Poultry" | "Butcher" | "Collections" | "Feed" | "Cold Storage";
+}
+
+export interface ColdStorageItem {
+  id: string; // e.g., COLD-001
+  batchId: string;
+  itemType: string; // e.g., "Premium Beef Loin", "Premium Mutton", etc.
+  totalKg: number;
+  frozenDate: string;
+  expiryDate: string;
+  temperatureCs: number;
+  storageBin: string;
+  packagingType: string;
+  status: "Frozen" | "Defrosting" | "Dispatched";
+  notes?: string;
+  freezerId?: string; // Links item to a specific freezer unit
+}
+
+export interface Freezer {
+  id: string; // e.g., FRZ-001
+  name: string; // e.g., "Chamber A - Deep Freeze"
+  capacityKg: number; // e.g., 2000
+  status: "Active" | "Maintenance" | "Decommissioned";
+  targetTempCs: number; // e.g., -18.5
+  notes?: string;
+}
+
+export interface FreezerElectricityBill {
+  id: string; // e.g., EB-001
+  freezerId: string;
+  month: string; // "YYYY-MM" (e.g., "2026-05")
+  kWhConsumed: number;
+  billAmount: number; // BDT 
+  status: "Paid" | "Pending";
+  paymentDate?: string;
+  notes?: string;
 }
 
 export type UserRole = 
+  | "Admin"
+  | "Butcher"
+  | "Accountant"
   | "Administrator" 
   | "Livestock Management" 
   | "Butcher Shop" 
   | "Collections" 
   | "Feed Shop"
-  | "Poultry Management";
+  | "Poultry Management"
+  | "Cold Storage Manager";
 
 export interface User {
   id: string;
@@ -91,6 +141,14 @@ export interface User {
 }
 
 export type PoultryType = "Broiler" | "Layer" | "Sonali" | "Duck" | "Turkey";
+
+export interface PoultryHealthLog {
+  id: string;
+  timestamp: string;
+  type: "Symptom" | "Vaccination";
+  detail: string;
+  notes?: string;
+}
 
 export interface PoultryBatch {
   id: string;
@@ -110,6 +168,7 @@ export interface PoultryBatch {
   status: "Chicks" | "Growing" | "Laying" | "Harvested" | "Sold";
   notes?: string;
   salesRevenue?: number;
+  healthLogs?: PoultryHealthLog[];
 }
 
 export interface AuditLog {
@@ -118,5 +177,16 @@ export interface AuditLog {
   department: string;
   timestamp: string;
   details: string;
+}
+
+export interface FeedSchedule {
+  id: string;
+  batchId: string;
+  feedKg: number;
+  intervalMinutes: number;
+  lastTriggered?: string;
+  isActive: boolean;
+  notes?: string;
+  createdAt: string;
 }
 
